@@ -4,54 +4,62 @@ from Forget_Password_frame import ForgetPasswordFrame
 import time
 from datetime import timedelta
 from Logger import logging
-
-
+from PIL import Image, ImageTk
+from File_path import resource_path  
 class LoginFrame(ctk.CTkFrame):
     def __init__(self, master, Connect_UserAccount):
-        super().__init__(master)
-  
+        super().__init__(master, fg_color="transparent") 
+
         
+        image_path = resource_path("Assets/background1.png")
+        self.background_image = Image.open(image_path)
+        self.background_photo = ImageTk.PhotoImage(self.background_image)
+
+        self.canvas = ctk.CTkCanvas(self, width=1400, height=800, highlightthickness=0)
+        self.canvas.pack(fill="both", expand=True)
+        self.canvas.create_image(0, 0, image=self.background_photo, anchor="nw")
+
         self.switch_to_Accountsystem = Connect_UserAccount
-        
-        
-        
-        self.title_label = ctk.CTkLabel(self, text="Login Account", font=("Arial", 20))
-        self.title_label.pack(pady=10)
-        
-        
-        #CheckBox
+
+        # Title Label
+        self.title_label = ctk.CTkLabel(self, text="Login Account", font=("Arial", 20), fg_color="transparent")
+        self.title_label.place(relx=0.5, rely=0.1, anchor="center")  
+
+        # CheckBox
         self.remember_me_var = ctk.BooleanVar()
-        self.remember_me_checkbox = ctk.CTkCheckBox(self,text="Remember me",variable=self.remember_me_var)
-        self.remember_me_checkbox.pack(pady=10)
-        
-        
-        # email-FIELD
-        self.email_label = ctk.CTkLabel(self, text="Email")
-        self.email_label.pack()
-        self.email_entry = ctk.CTkEntry(self, width=300)
-        self.email_entry.pack(pady=5)
+        self.remember_me_checkbox = ctk.CTkCheckBox(self, text="Remember me", variable=self.remember_me_var)
+        self.remember_me_checkbox.place(relx=0.5, rely=0.2, anchor="center")  
 
-        # Password-FIELD
-        self.password_label = ctk.CTkLabel(self, text="Password")
-        self.password_label.pack()
-        self.password_entry = ctk.CTkEntry(self, width=300, show="*")
-        self.password_entry.pack(pady=5)
+        # Email Field
+        self.email_label = ctk.CTkLabel(self, text="Email", fg_color="transparent")
+        self.email_label.place(relx=0.5, rely=0.3, anchor="center") 
+        self.email_entry = ctk.CTkEntry(self, width=300, fg_color="transparent")
+        self.email_entry.place(relx=0.5, rely=0.35, anchor="center")
 
-        # Login-BTN
-        self.login_button = ctk.CTkButton(self, text="Login", command=self.Login_user)
-        self.login_button.pack(pady=10)
+        # Password Field
+        self.password_label = ctk.CTkLabel(self, text="Password", fg_color="transparent")
+        self.password_label.place(relx=0.5, rely=0.45, anchor="center") 
+        self.password_entry = ctk.CTkEntry(self, width=300, show="*", fg_color="transparent")
+        self.password_entry.place(relx=0.5, rely=0.5, anchor="center")  
 
-        self.goback_button = ctk.CTkButton(self, text="Go back", command=self.go_back)
-        self.goback_button.pack(pady=10)
+        # Login Button
+        self.login_button = ctk.CTkButton(self, text="Login", command=self.Login_user, fg_color="transparent")
+        self.login_button.place(relx=0.5, rely=0.6, anchor="center")  
+        # Go Back Button
+        self.goback_button = ctk.CTkButton(self, text="Go back", command=self.go_back, fg_color="transparent")
+        self.goback_button.place(relx=0.5, rely=0.7, anchor="center") 
 
-        self.status_label = ctk.CTkLabel(self, text="")
-        self.status_label.pack(pady=10)
-        self.forgot_password = ctk.CTkButton(
-            self, text="Forget password", command=self.open_Forget_password
-        )
-        self.after(100,self.auto_login)
-        
-        
+        # Status Label
+        self.status_label = ctk.CTkLabel(self, text="", fg_color="transparent")
+        self.status_label.place(relx=0.5, rely=0.8, anchor="center") 
+
+        # Forgot Password Button
+        self.forgot_password = ctk.CTkButton(self, text="Forget password", command=self.open_Forget_password)
+        self.forgot_password.place(relx=0.5, rely=0.9, anchor="center")  
+
+        self.lift()  
+
+        self.after(100, self.auto_login)
 
        
     

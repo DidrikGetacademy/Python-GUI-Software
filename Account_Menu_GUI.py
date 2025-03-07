@@ -15,7 +15,7 @@ class MainApp(ctk.CTk):
         self.minsize(1400,800)
         
         
-        ImageFront = resource_path("Assets/front.png")
+        ImageFront = resource_path("Assets/background1.png")
         self.background_image = Image.open(ImageFront)  
         self.background_photo = ImageTk.PhotoImage(self.background_image)
 
