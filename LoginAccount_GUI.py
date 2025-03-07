@@ -10,7 +10,7 @@ class LoginFrame(ctk.CTkFrame):
     def __init__(self, master, Connect_UserAccount):
         super().__init__(master, fg_color="transparent") 
 
-        
+        # Load and set the background image
         image_path = resource_path("Assets/background1.png")
         self.background_image = Image.open(image_path)
         self.background_photo = ImageTk.PhotoImage(self.background_image)
@@ -21,47 +21,111 @@ class LoginFrame(ctk.CTkFrame):
 
         self.switch_to_Accountsystem = Connect_UserAccount
 
-        # Title Label
-        self.title_label = ctk.CTkLabel(self, text="Login Account", font=("Arial", 20), fg_color="transparent")
-        self.title_label.place(relx=0.5, rely=0.1, anchor="center")  
 
-        # CheckBox
-        self.remember_me_var = ctk.BooleanVar()
-        self.remember_me_checkbox = ctk.CTkCheckBox(self, text="Remember me", variable=self.remember_me_var)
-        self.remember_me_checkbox.place(relx=0.5, rely=0.2, anchor="center")  
+        self.container = ctk.CTkFrame(
+            self, 
+            fg_color="#2C3E50", 
+            corner_radius=15, 
+            width=400, 
+            height=450
+            )  
+        self.container.place(relx=0.5, rely=0.5, anchor="center")
+
+        # Title Label
+        self.title_label = ctk.CTkLabel(
+            self.container, 
+            text="Login Account", 
+            font=("Arial", 24, "bold"), 
+            text_color="#FFFFFF"
+            )  
+        self.title_label.pack(pady=20)
 
         # Email Field
-        self.email_label = ctk.CTkLabel(self, text="Email", fg_color="transparent")
-        self.email_label.place(relx=0.5, rely=0.3, anchor="center") 
-        self.email_entry = ctk.CTkEntry(self, width=300, fg_color="transparent")
-        self.email_entry.place(relx=0.5, rely=0.35, anchor="center")
+        self.email_label = ctk.CTkLabel(self.container, text="Email", text_color="#FFFFFF")  # White text
+        self.email_label.pack(pady=(10, 0))
+        self.email_entry = ctk.CTkEntry(
+            self.container, width=300, 
+            fg_color="#FFFFFF", 
+            text_color="#2C3E50", 
+            border_color="#2C3E50", 
+            placeholder_text="Enter your email",   
+            justify="center"
+            )
+        self.email_entry.pack(pady=5)
 
         # Password Field
-        self.password_label = ctk.CTkLabel(self, text="Password", fg_color="transparent")
-        self.password_label.place(relx=0.5, rely=0.45, anchor="center") 
-        self.password_entry = ctk.CTkEntry(self, width=300, show="*", fg_color="transparent")
-        self.password_entry.place(relx=0.5, rely=0.5, anchor="center")  
+        self.password_label = ctk.CTkLabel(self.container, text="Password", text_color="#FFFFFF")  # White text
+        self.password_label.pack(pady=(10, 0))
+        self.password_entry = ctk.CTkEntry(
+            self.container, width=300,
+            show="*",
+            fg_color="#FFFFFF",
+            text_color="#2C3E50", 
+            border_color="#2C3E50", 
+            placeholder_text="Enter your password",   
+            justify="center"
+            )
+        self.password_entry.pack(pady=5)
+
+        # Remember Me Checkbox
+        self.remember_me_var = ctk.BooleanVar()
+        self.remember_me_checkbox = ctk.CTkCheckBox(
+            self.container,
+            text="Remember me",
+            variable=self.remember_me_var,
+            text_color="#FFFFFF"
+             ) 
+        self.remember_me_checkbox.pack(pady=10)
+
 
         # Login Button
-        self.login_button = ctk.CTkButton(self, text="Login", command=self.Login_user, fg_color="transparent")
-        self.login_button.place(relx=0.5, rely=0.6, anchor="center")  
-        # Go Back Button
-        self.goback_button = ctk.CTkButton(self, text="Go back", command=self.go_back, fg_color="transparent")
-        self.goback_button.place(relx=0.5, rely=0.7, anchor="center") 
+        self.login_button = ctk.CTkButton(
+            self.container,
+              text="Login",
+              command=self.Login_user,
+              fg_color="#34495E",
+              text_color="#FFFFFF",
+              hover_color="#1F2A38"     
+                )  
+        self.login_button.pack(pady=20)
 
-        # Status Label
-        self.status_label = ctk.CTkLabel(self, text="", fg_color="transparent")
-        self.status_label.place(relx=0.5, rely=0.8, anchor="center") 
+
 
         # Forgot Password Button
-        self.forgot_password = ctk.CTkButton(self, text="Forget password", command=self.open_Forget_password)
-        self.forgot_password.place(relx=0.5, rely=0.9, anchor="center")  
+        self.forgot_password = ctk.CTkButton(
+            self.container, 
+            text="Forgot password?", 
+            command=self.open_Forget_password, 
+            fg_color="transparent", 
+            text_color="#FFFFFF", 
+            hover_color="#1F2A38"
+            )  
+        self.forgot_password.pack(pady=5)
+
+
+        # Go Back Button
+        self.goback_button = ctk.CTkButton(
+            self.container, 
+            text="Go back", 
+            command=self.go_back, 
+            fg_color="transparent",
+            text_color="#FFFFFF", 
+            hover_color="#1F2A38"
+            )  
+        self.goback_button.pack(pady=5)
+
+
+        # Status Label
+        self.status_label = ctk.CTkLabel(
+            self.container, 
+            text="", 
+            text_color="#E74C3C"
+            )  
+        self.status_label.pack(pady=10)
 
         self.lift()  
 
         self.after(100, self.auto_login)
-
-       
     
     
     

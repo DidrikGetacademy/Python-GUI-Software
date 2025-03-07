@@ -20,7 +20,12 @@ class MainApp(ctk.CTk):
         self.background_photo = ImageTk.PhotoImage(self.background_image)
 
 
-        self.canvas = ctk.CTkCanvas(self, width=200, height=200, highlightthickness=0)
+        self.canvas = ctk.CTkCanvas(
+            self, 
+            width=200, 
+            height=200, 
+            highlightthickness=0
+            )
         self.canvas.pack(fill="both", expand=True)
         self.setup_background()
 
@@ -28,16 +33,36 @@ class MainApp(ctk.CTk):
        
 
 
-        self.Register_button = ctk.CTkButton(self, text="Register Account", command=self.open_Register_Account,bg_color="black",fg_color="Black",text_color="white")
+        self.Register_button = ctk.CTkButton(
+            self, 
+            text="Register Account", 
+            command=self.open_Register_Account,
+            bg_color="black",fg_color="Black",
+            text_color="white"
+            )
         self.Register_button.place(relx=0.5, rely=0.5, anchor="center")  
 
     
-        self.login_button = ctk.CTkButton(self, text="Login", command=self.open_login_Account,bg_color="black",fg_color="Black",text_color="white")
+        self.login_button = ctk.CTkButton(
+            self, 
+            text="Login", 
+            command=self.open_login_Account,
+            bg_color="black",fg_color="Black",
+            text_color="white"
+            )
+        
         self.login_button.place(relx=0.5, rely=0.6, anchor="center")  
         
         
-        self.register_frame = RegistrationFrame(self, self.open_login_Account)
-        self.login_frame = LoginFrame(self, self.Connect_User_Account)
+        self.register_frame = RegistrationFrame(
+            self, 
+            self.open_login_Account
+            )
+        
+        self.login_frame = LoginFrame(
+            self, 
+            self.Connect_User_Account
+            )
         self.UserAccount_Frame = None
 
 
