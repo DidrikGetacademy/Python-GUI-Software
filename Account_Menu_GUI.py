@@ -3,8 +3,7 @@ from RegisterAccount_GUI import RegistrationFrame
 from LoginAccount_GUI import LoginFrame
 from PIL import Image, ImageTk 
 from File_path import resource_path
-ctk.set_appearance_mode("Dark")
-ctk.set_default_color_theme("blue")
+
 class MainApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -37,7 +36,8 @@ class MainApp(ctk.CTk):
             self, 
             text="Register Account", 
             command=self.open_Register_Account,
-            bg_color="black",fg_color="Black",
+            bg_color="black",
+            fg_color="Black",
             text_color="white"
             )
         self.Register_button.place(relx=0.5, rely=0.5, anchor="center")  

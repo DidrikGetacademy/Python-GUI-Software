@@ -21,11 +21,13 @@ def set_user_data(data,password = None,RememberMe = False):
     logging.info("User data has been set, and dumped in file.")
 
 
+#C:\Users\YourUsername\AppData\Roaming\LearnReflect\Userdata.txt
 
 def get_user_data():
     return _user_data
 
 
+#C:\Users\didri\AppData\Roaming\LearnReflect\Userdata.txt
 
 
 url = "https://learnreflects.com/Server/UpdateUser.php"

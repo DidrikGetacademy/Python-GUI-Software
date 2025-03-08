@@ -1,5 +1,0 @@
-
-gjøre ferdig bruk av audio
-
-
-implementere Før/Etter bilder av Oppskalering ved bruk av den modellen som er valgt. 

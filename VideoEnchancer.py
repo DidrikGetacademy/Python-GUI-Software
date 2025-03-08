@@ -25,16 +25,14 @@ from multiprocessing import (
     Queue          as multiprocessing_Queue,
     freeze_support as multiprocessing_freeze_support
 )
-
+import logging
 from json import (
     load  as json_load, 
     dumps as json_dumps
 )
 
-import logging
+import gc
 
-logging.basicConfig(level=logging.INFO)
-logging.info("LearnReflectAI.py started.")
 
 from os import (
     sep        as os_separator,
@@ -111,6 +109,7 @@ from customtkinter import (
     CTk,
     CTkButton,
     CTkFrame,
+    CTkSlider,
     CTkEntry,
     CTkFont,
     CTkImage,
@@ -151,16 +150,13 @@ SRVGGNetCompact_models_list = [ "RealESR_Gx4", "RealSRx4_Anime" ]
 RRDB_models_list            = [ "BSRGANx4", "BSRGANx2", "RealESRGANx4" ]
 
 #Video Preview
-video_cache = {}
 frame_cache = {}
+last_model_config =  None
 preview_ai_instance = None
-last_model_config = None
-preview_executor = ThreadPoolExecutor(max_workers=1)
-global preview_shown
-global original_preview
-global upscaled_preview
 current_loaded_model = None
 model_loading_thread = None
+global original_preview
+global upscaled_preview
 model_loading_lock = threading.Lock()
 
 AI_models_list         = ( SRVGGNetCompact_models_list + AI_LIST_SEPARATOR + RRDB_models_list + AI_LIST_SEPARATOR + IRCNN_models_list )
@@ -264,46 +260,285 @@ supported_video_extensions = [
 
 
 
-    
 
-def show_preview_if_files_selected():
-    global selected_file_list
+
+
+
+class SmolAgent:
+    def __init__(self, parent_container):
+        print("Initalizing SmolAgent ")
+        self.parent_container = parent_container
+
+
+
+
+
+
+
+
+
+
+
+
+
+####VIDEO PREVIEW CLASS######
+class VideoPreview:
+    def __init__(self, parent_container, original_label, upscaled_label, video_path):
+        print("Initializing VideoPreview...")
+        self.parent_container = parent_container
+        self.original_label = original_label
+        self.upscaled_label = upscaled_label
+        self.video_path = video_path
+        self.cap = cv2.VideoCapture(video_path)
+        self.target_size = (1080, 1920)
+        self.fps = int(self.cap.get(cv2.CAP_PROP_FPS))
+        self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
+        # Create and place the timeline slider within the parent container
+        self.timeline_slider = CTkSlider(
+            self.parent_container,
+            from_=0,
+            to=self.total_frames,
+            command=self.update_frame_preview
+        )
+        self.timeline_slider.pack(fill="x", padx=20, pady=10, after=self.upscaled_label)
+        
+        # Load the first frame
+        self.update_frame_preview(0)
+        print("VideoPreview initialized successfully.")
+
+    def update_gui(self, original_frame, upscaled_frame):
+        print("Updating GUI with new frames...")
+        preview_size = (340, 400)  
  
-    if not selected_file_list:
-        show_error_message("Select files first!")
+        original_image = self.convert_frame_to_ctk(original_frame)
+        upscaled_image = self.convert_frame_to_ctk(upscaled_frame)
+
+        self.original_label.configure(image=original_image)
+        self.upscaled_label.configure(image=upscaled_image)
+
+        # Ensure size remains fixed
+        self.original_label.configure(width=preview_size[0], height=preview_size[1])
+        self.upscaled_label.configure(width=preview_size[0], height=preview_size[1])
+
+        self.original_label.image = original_image
+        self.upscaled_label.image = upscaled_image
+        self.original_label.update_idletasks()
+        self.upscaled_label.update_idletasks()
+
+        self.timeline_slider.configure(state='normal')
+        print("GUI updated successfully.")
+
+    def update_frame_preview(self, frame_number):
+        print(f"Updating frame preview for frame {frame_number}...")
+        self.timeline_slider.configure(state='disabled')   # Disable the slider while upscaling is in progress
+
+        self.loading_icon = LoadingIcon(self.parent_container)
+        self.loading_icon.start()
+
+        Thread(target=self.process_and_update_frame, args=(frame_number,)).start()
+
+    def process_and_update_frame(self, frame_number):
+        try:
+            print(f"Processing frame {frame_number}...")
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(frame_number))
+            
+            # Check if frame is already cached
+            if frame_number in frame_cache:
+                self.loading_icon.stop()
+                print(f"Frame {frame_number} loaded from cache.")
+                original_frame, upscaled_frame = frame_cache[frame_number]
+            else:
+                success, frame = self.cap.read()
+                if success:
+                    print(f"Frame {frame_number} read successfully from video.")
+                    
+                    # Resize original frame to target size
+                    original_frame = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_AREA)
+                    upscaled_frame = self.process_frame(original_frame)  # Upscale the frame
+                    frame_cache[frame_number] = (original_frame, upscaled_frame)
+                    print(f"Frame {frame_number} processed and added to cache.")
+                else:
+                    print(f"Failed to read frame {frame_number} from video.")
+                    return 
+            
+            # Update the GUI and then re-enable the slider
+            self.parent_container.after(0, lambda: self.update_gui(original_frame, upscaled_frame))
+            self.parent_container.after(0, self.loading_icon.stop)
+            print(f"Stopped loading animation for frame {frame_number}.")
+
+        except Exception as e:
+            print(f"Error processing frame {frame_number}: {str(e)}")
+            self.loading_icon.stop()
+
+    def process_frame(self, frame):
+        global preview_ai_instance, last_model_config
+        print("Processing frame with AI model...")
+        
+        if not selected_AI_model or selected_AI_model == AI_LIST_SEPARATOR[0]:
+            show_error_message("Select an AI model first!")
+            return
+        
+        if preview_ai_instance:
+            frame = preview_ai_instance.AI_orchestration(frame)
+            logging.debug("Frame processed by AI orchestration.")
+            return frame
+
+        return frame
+
+    def convert_frame_to_ctk(self, frame):
+        preview_width, preview_height = 340, 400  # Match preview container size
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        resized_frame = cv2.resize(rgb_frame, (preview_width, preview_height), interpolation=cv2.INTER_AREA)
+        
+        pil_image = Image.fromarray(resized_frame)
+        return CTkImage(pil_image, size=(preview_width, preview_height))  # Prevent auto-scaling
+
+    def close(self):
+        print("Releasing video capture and destroying slider...")
+        self.cap.release()
+        self.timeline_slider.destroy()
+
+
+
+
+
+
+
+
+
+
+
+
+
+####VIDEO PREVIEW EXTERNAL FUNCTIONS######
+def load_model_inference():
+    global preview_ai_instance, last_model_config
+    print(f" preview_ai_instance: {preview_ai_instance},last model config: {last_model_config} ")
+    if not selected_AI_model or selected_AI_model == AI_LIST_SEPARATOR[0]:
+        print("Select an AI model first!")
         return
-    print(f"selected file list: {selected_file_list[0]}")
-    async_preview(selected_file_list[0])
+    try:
+        resolution_percentage = float(selected_input_resize_factor.get())
+        if not 1 <= resolution_percentage <= 100:
+            print("Resolution must be between 1% and 100%")
+            return
+
+        resize_factor = resolution_percentage / 100.0  
+
+        current_config = (
+            selected_AI_model,
+            selected_gpu,
+            resize_factor,  
+            float(selected_VRAM_limiter.get())
+        )
+
+        if not preview_ai_instance or last_model_config != current_config:
+            vram_limiter = float(selected_VRAM_limiter.get())
+            
+            tiles_resolution = 100 * int(float(str(selected_VRAM_limiter.get())))
+            if tiles_resolution > 0: 
+                vram_multiplier = very_low_VRAM
+                max_resolution = int(vram_multiplier * vram_limiter * 100)
+                
+                preview_ai_instance = AI(
+                    selected_AI_model,
+                    selected_gpu,
+                    resize_factor, 
+                    max_resolution
+                )
+                preview_ai_instance.inferenceSession.set_providers(
+                    ['DmlExecutionProvider'], 
+                    [{'device_id': 0}]
+                )
+                dummy_height = max(64, int(512 * resize_factor))  
+                dummy_width = max(64, int(512 * resize_factor))
+                dummy_input = np.random.randint(0, 255, (dummy_height, dummy_width, 3), dtype=np.uint8)
+
+                print(f"Dummy input shape: {dummy_input.shape}")
+                _ = preview_ai_instance.AI_orchestration(dummy_input)
+                last_model_config = current_config
+                print("Dummy inference complete")
+                
+    except Exception as e:
+        print(f"Error loading model with dummy input: {str(e)}")
+        print("Dummy inference ERROR")
 
 
 
 
 
 
-def async_preview(video_path):
-    if current_loaded_model != selected_AI_model.get():
-        show_error_message("Model not loaded yet")
-        return
-    if video_path not in frame_cache:
-        cap = cv2.VideoCapture(video_path)
-        _, frame = cap.read()
-        frame_cache[video_path] = frame 
-    future = preview_executor.submit(process_and_show_preview, frame_cache[video_path])
-    future.add_done_callback(lambda f: update_ui(f.result()))
+
+def load_model_if_needed(model_name):
+    global preview_ai_instance, current_loaded_model
+    print(f"Loading model if needed: {model_name}...")
+    with model_loading_lock:
+        if current_loaded_model == model_name:
+            print(f"Model {model_name} already loaded.")
+            return 
+        
+        try:
+            print(f"Loading {model_name} model...")
+            info_message.set(f"Loading {model_name} model...")
+
+     
+            if preview_ai_instance:
+                preview_ai_instance.inferenceSession = None
+                del preview_ai_instance
+                preview_ai_instance = None
+                gc.collect()
+
+          
+            preview_ai_instance = AI(
+                model_name,
+                selected_gpu,
+                int(float(selected_input_resize_factor.get())),
+                float(selected_VRAM_limiter.get())
+            )
+
+            dummy_input = np.zeros((512, 512, 3), dtype=np.uint8)
+            for _ in range(2):
+                _ = preview_ai_instance.AI_orchestration(dummy_input)
+
+            current_loaded_model = model_name
+            info_message.set(f"Model: {model_name} Ready!")
+            print(f"{model_name} loaded successfully.")
+        except Exception as e:
+            print(f"Error loading model {model_name}: {str(e)}")
+            info_message.set(f"Model load failed: {str(e)}")
+            current_loaded_model = None
+            preview_ai_instance = None
+        finally:
+            window.after(0, check_model_loading_progress)
 
 
 
-def update_ui(result):
-    print("READY (UPDATE_UI)")
-    pass
 
 
 
-def check_if_file_is_image(file_path: str) -> bool:
-    image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp']
-    return any(file_path.lower().endswith(ext) for ext in image_extensions)
 
 
+
+def check_model_loading_progress():
+    global model_loading_thread
+    if model_loading_thread.is_alive():
+        window.after(100, check_model_loading_progress)
+    else:
+        if current_loaded_model == selected_AI_model:
+            window.preview_button.configure(state=NORMAL)
+            info_message.set("Ready for preview")
+        else:
+            window.preview_button.configure(state=DISABLED)
+            info_message.set("Model load failed")
+
+
+
+
+
+
+
+###Loading-ICON####
 class LoadingIcon:
     def __init__(self,master):
         self.master = master
@@ -311,19 +546,20 @@ class LoadingIcon:
         self.frames = [CTkImage(frame.convert('RGBA'), size=(100, 100)) 
                for frame in ImageSequence.Iterator(self.loading_gif)]
 
-        self.label = CTkLabel(master,text="", image=self.frames[0])
+        self.label = CTkLabel(master,text="", image=self.frames[0],bg_color='transparent')
         self.label.place(relx=0.5, rely=0.5, anchor="center")
         self.current_frame = 0
         self.animating = False
 
     def start(self):
         self.animating = True
-        print("Started animate")
+        print("Started loading animation")
         self.animate()
 
     def stop(self):
-        self.animating = False 
+        self.animating = False
         self.label.destroy()
+        print("Stopped loading animation")
     
     def animate(self):
         if self.animating:
@@ -335,151 +571,115 @@ class LoadingIcon:
 
 
 
-def process_and_show_preview(video_path, loading_icon):
-    global preview_ai_instance, last_model_config
 
-    if not selected_AI_model or selected_AI_model == AI_LIST_SEPARATOR[0]:
-        show_error_message("Select an AI model first!")
-        return
 
+# GUI place functions ---------------------------
+def create_placeholder_image(width, height):
+    img = Image.new('RGB', (width, height), color='#000000')
+    draw = ImageDraw.Draw(img)
     try:
-        current_config = (
-            selected_AI_model,
-            selected_gpu,
-            int(float(selected_input_resize_factor.get())),
-            float(selected_VRAM_limiter.get())
-        )
-
-        if not preview_ai_instance or last_model_config != current_config:
-            resize_factor = int(float(selected_input_resize_factor.get()))
-            vram_limiter = float(selected_VRAM_limiter.get())
-            
-        tiles_resolution = 100 * int(float(str(selected_VRAM_limiter.get())))
-        if tiles_resolution > 0: 
-            vram_multiplier = very_low_VRAM
-
-            max_resolution = int(vram_multiplier * vram_limiter * 100)
-            
-            preview_ai_instance = AI(
-                selected_AI_model,
-                selected_gpu,
-                resize_factor,
-                max_resolution
-            )
-            preview_ai_instance.inferenceSession.set_providers(
-                ['DmlExecutionProvider'], 
-                [{'device_id': 0}]
-            )
-
-     
-            dummy_input = np.zeros((512, 512, 3), dtype=np.uint8)
-            _ = preview_ai_instance.AI_orchestration(dummy_input)
-            last_model_config = current_config
-
-            if check_if_file_is_image(video_path):
-                frame =cv2.imread(video_path)
-                if frame is None:
-                    raise ValueError("Could not read image..")
-                
-                frame = cv2.resize(frame, (512, 512), interpolation=cv2.INTER_AREA)
-            else:
-               cap = video_cache.get(video_path)
-               if not cap:
-                    cap = cv2.VideoCapture(video_path)
-                    video_cache[video_path] = cap
-               if not os.path.exists(video_path):
-                  raise ValueError(f"File not found: {video_path}")
-               
-               cap = cv2.VideoCapture(video_path)
-               if not cap.isOpened():
-                    error_code = cap.get(cv2.CAP_PROP_POS_MSEC)
-                    raise ValueError(f"OpenCV error {int(error_code)}: Could not open video file")
-               
-               success, frame = cap.read()
-               if not success:
-                   raise ValueError("Frame read failed.")
-               
-               frame = cv2.resize(frame, (960, 540), interpolation=cv2.INTER_AREA)
-
-
-   
-            start_time = time.perf_counter()
-            upscaled_frame = preview_ai_instance.AI_orchestration(frame)
-            processing_time = time.perf_counter() - start_time
-
-    
-            original_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            upscaled_rgb = cv2.cvtColor(upscaled_frame, cv2.COLOR_BGR2RGB)
-
-            print(f"Preview processed in {processing_time:.2f}s")
-
-            window.after(0, lambda: show_preview_frames(
-                original_rgb,
-                upscaled_rgb,
-                loading_icon
-            ))
-
-    except Exception as e:
-        print(f"Preview error: {str(e)}")
-        loading_icon.stop()
-        window.after(0, lambda: info_message.set(f"Preview failed: {str(e)}"))  # Update this line
-        info_message.set("Preview failed")
+        font = ImageFont.truetype("arial.ttf", 100)
+    except IOError:
+        font = ImageFont.load_default()
+    text = "?"
+    text_width = draw.textlength(text, font=font)
+    text_height = font.size
+    x = (width - text_width) // 2
+    y = (height - text_height) // 2
+    draw.text((x, y), text, fill="#FFFFFF", font=font)
+    return img
 
 
 
 
 
-def show_preview_frames(original, upscaled, loading_icon):
-    global original_preview, upscaled_preview, preview_shown
-    loading_icon.stop()
+
+def place_loadFile_section(window):
+    background = CTkFrame(master = window, fg_color = background_color, corner_radius = 1)
+
+    global container, original_preview, upscaled_preview
+
+    preview_width = 340  
+    preview_height = 400  
 
 
-    for widget in window.preview_frame.winfo_children():
-        widget.destroy()
-
-    container_width = 800  
-    container_height = 445  
-    target_width = int(container_width / 2 - 40)  
-    target_height = int(container_height - 60)   
-
-
-    def resize_image(image, target_w, target_h):
-        h, w = image.shape[:2]
-        scale = min(target_w/w, target_h/h)
-        return cv2.resize(image, (int(w*scale), int(h*scale)), interpolation=cv2.INTER_AREA)
-
-    original = resize_image(original, target_width, target_height)
-    original_rgb = cv2.cvtColor(original, cv2.COLOR_BGR2RGB)
-    original_pil = Image.fromarray(original_rgb)
-    
-
-    upscaled = resize_image(upscaled, target_width, target_height)
-    upscaled_rgb = cv2.cvtColor(upscaled, cv2.COLOR_BGR2RGB)
-    upscaled_pil = Image.fromarray(upscaled_rgb)
-
-    original_image = CTkImage(original_pil, size=original_pil.size)
-    upscaled_image = CTkImage(upscaled_pil, size=upscaled_pil.size)
+    window.preview_frame = CTkFrame(
+    master=window, 
+    fg_color=dark_color,
+    width=preview_width * 2 + 40, 
+    height=preview_height + 40, 
+    corner_radius=10
+    )
+    window.preview_frame.place(relx=0.80, rely=0.205, anchor="center")
 
 
+    # Create placeholder images
+    placeholder_img = create_placeholder_image(340, 400)
+    placeholder_photo = CTkImage(placeholder_img, size=(preview_width, preview_height))
+
+    # Create container
     container = CTkFrame(window.preview_frame, fg_color=dark_color)
     container.pack(pady=20, padx=20, fill='both', expand=True)
 
-
+    # Original frame with placeholder
     original_frame = CTkFrame(container, fg_color=dark_color)
-    original_frame.pack(side='left', fill='both', expand=True, padx=10)
+    original_frame.pack(side='left', fill='both', expand=True, padx=5)
     CTkLabel(original_frame, text="Original", font=bold14, text_color=app_name_color).pack(pady=5)
-    original_preview = CTkLabel(original_frame, image=original_image, text="")
+    original_preview = CTkLabel(original_frame, image=placeholder_photo, text="", width=340, height=400)
     original_preview.pack()
 
-
+    # Upscaled frame with placeholder
     upscaled_frame = CTkFrame(container, fg_color=dark_color)
     upscaled_frame.pack(side='right', fill='both', expand=True, padx=10)
     CTkLabel(upscaled_frame, text="Upscaled Preview", font=bold14, text_color=app_name_color).pack(pady=5)
-    upscaled_preview = CTkLabel(upscaled_frame, image=upscaled_image, text="")
+    upscaled_preview = CTkLabel(upscaled_frame, image=placeholder_photo, text="", width=340, height=400)
     upscaled_preview.pack()
+    
+    input_file_button = CTkButton(
+        master = window,
+        command  = open_files_action,
+        text     = "SELECT FILES",
+        width    = 140,
+        height   = 30,
+        font     = bold11,
+        border_width = 1,
+        fg_color     = "#282828",
+        text_color   = "#E0E0E0",
+        border_color = "#0096FF"
+        )
+    background.place(relx = 0.0, rely = 0.0, relwidth = 1.0, relheight = 0.42)
+    input_file_button.place(relx = 0.55, rely = 0.4, anchor = "center")
 
-    preview_shown = True
-    info_message.set("Preview Ready!")
+
+
+
+
+
+def select_AI_from_menu(selected_option: str) -> None:
+    global selected_AI_model, current_loaded_model, model_loading_thread
+    print(f"AI model selected: {selected_option}")
+    
+    if selected_option == current_loaded_model or selected_option in AI_LIST_SEPARATOR:
+        return
+    
+    window.preview_button.configure(state=DISABLED)
+    selected_AI_model = selected_option
+    info_message.set(f"Loading {selected_option}...")
+    update_file_widget(1, 2, 3)
+
+    if model_loading_thread and model_loading_thread.is_alive():
+        model_loading_thread.join(timeout=0.5)
+    
+    model_loading_thread = threading.Thread(
+        target=load_model_if_needed,
+        args=(selected_option, ),
+        daemon=True
+    )
+    model_loading_thread.start()
+    window.after(100, check_model_loading_progress)
+
+
+
 
 
 
@@ -1028,9 +1228,6 @@ class AI:
 
 
 
-
-
-
 # GUI utils ---------------------------
 class MessageBox(CTkToplevel):
 
@@ -1240,14 +1437,14 @@ class FileWidget(CTkScrollableFrame):
             self.label_list.append(label)
             index_row +=1
     def add_file_information(self, file_path, index_row) -> CTkLabel:
-        # Create a container frame for the file entry
+    
         file_frame = CTkFrame(self, fg_color="transparent")
         file_frame.grid(row=index_row, column=0, sticky="ew", pady=3, padx=3)
 
         # File information label
         infos, icon = self.extract_file_info(file_path)
         label = CTkLabel(
-            file_frame,  # Parent changed to file_frame
+            file_frame,  
             text=infos,
             image=icon,
             font=bold12,
@@ -1260,7 +1457,7 @@ class FileWidget(CTkScrollableFrame):
         )
         label.pack(side="left", fill="x", expand=True)
 
-        # Preview button
+
         preview_button = CTkButton(
             file_frame,
             text="Preview",
@@ -1271,13 +1468,15 @@ class FileWidget(CTkScrollableFrame):
         )
         preview_button.pack(side="right", padx=(0, 10))
 
-        return file_frame  # Return the container frame instead of the label
+        return file_frame  
 
     def preview_file(self, file_path):
-        loading_icon = LoadingIcon(window)
-        loading_icon.start()
-        preview_executor.submit(process_and_show_preview, file_path, loading_icon)
+        global preview_instance, container, original_preview, upscaled_preview
 
+
+        # Create new preview in the existing container and labels
+        preview_instance = VideoPreview(container, original_preview, upscaled_preview, file_path)
+  
     
 
     def add_clean_button(self) -> None:
@@ -1357,7 +1556,6 @@ class FileWidget(CTkScrollableFrame):
                 file_infos += (
                     f"AI input ({self.input_resize_factor}%) ➜ {input_resized_width}x{input_resized_height} \n"
                     f"AI output (x{self.upscale_factor}) ➜ {upscaled_width}x{upscaled_height} \n"
-                    f"{output_resized_width}x{output_resized_height}"
                 )
         else:
             image_name    = str(file_path.split("/")[-1])
@@ -2722,86 +2920,8 @@ def select_audio_mode_from_menu(selected_mode):
     
     
 
-def select_AI_from_menu(selected_option: str) -> None:
-    global selected_AI_model, current_loaded_model, model_loading_thread
-
-    #exit early if model already loaded 
-    if selected_option == current_loaded_model or selected_option in AI_LIST_SEPARATOR:
-        return
-    
-    #Updates ui immedietaly 
-    window.preview_button.configure(state=DISABLED)
-    info_message.set(f"Loading {selected_option}...")
-    selected_AI_model = selected_option
-    update_file_widget(1, 2, 3) #exsisting UI update 
-
-    #stops any ongoing loading thread 
-    if model_loading_thread and model_loading_thread.is_alive():
-        model_loading_thread.join(timeout=0.5)
-       
-        #starts a new loading thread on model.
-        model_loading_thread = threading.Thread(
-            target=load_model_if_needed,
-            args=(selected_option, ),
-            daemon=True
-        )
-        model_loading_thread.start()
-
-        #checks loding status
-        window.after(100, check_model_loading_progress)
-
-def check_model_loading_progress():
-    global model_loading_thread
-    if model_loading_thread.is_alive():
-        window.after(100, check_model_loading_progress)
-    else:
-        if current_loaded_model == selected_AI_model:
-            window.preview_button.configure(state=NORMAL)
-            info_message.set("Ready for preview")
-        else:
-            window.preview_button.configure(state=DISABLED)
-            info_message.set("Model load failed")
 
 
-
-def load_model_if_needed(model_name):
-    import gc
-    global preview_ai_instance, current_loaded_model
-    with model_loading_lock:
-        #Returns early if model already is loaded
-        if current_loaded_model == model_name:
-            return 
-        
-
-        try:
-            print(f"Loading {model_name} model...")
-            info_message.set(f"Loading {model_name} model...")
-            if preview_ai_instance:
-                preview_ai_instance.inferenceSession = None
-                del preview_ai_instance
-                preview_ai_instance = None
-                gc.collect()
-
-            
-            preview_ai_instance = AI(
-                model_name,
-                selected_gpu,
-                int(float(selected_input_resize_factor.get())),
-                float(selected_VRAM_limiter.get())
-            )
-
-
-            dummy_input = np.zeros((512, 512, 3) dtype=np.uint8)
-            for _ in range(2):
-                _ = preview_ai_instance.AI_orchestration(dummy_input)
-
-            current_loaded_model = model_name
-            info_message.set(f"Model: {model_name} Ready!")
-            print(f"{model_name} loaded successfully")
-        except Exception as e:
-            info_message.set(f"Model load failed: {str(e)}")
-            current_loaded_model = None
-            preview_ai_instance = None
 
 
 def select_AI_multithreading_from_menu(selected_option: str) -> None:
@@ -3111,75 +3231,6 @@ def open_info_cpu():
 
 
 
-def create_placeholder_image(width, height):
-    img = Image.new('RGB', (width, height), color='#000000')
-    draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.truetype("arial.ttf", 100)
-    except IOError:
-        font = ImageFont.load_default()
-    text = "?"
-    text_width = draw.textlength(text, font=font)
-    text_height = font.size
-    x = (width - text_width) // 2
-    y = (height - text_height) // 2
-    draw.text((x, y), text, fill="#FFFFFF", font=font)
-    return img
-
-
-
-# GUI place functions ---------------------------
-def place_loadFile_section(window):
-    background = CTkFrame(master = window, fg_color = background_color, corner_radius = 1)
-
-    global preview_frame_button, original_preview, upscaled_preview, input_file_button
-    
-    window.preview_frame = CTkFrame(
-    master=window,
-    width=800,
-    height=445,
-    fg_color=dark_color,
-    corner_radius=10
-    )
-    window.preview_frame.place(relx=0.80, rely=0.215, anchor="center")
-
-
-    # Create placeholder images
-    placeholder_img = create_placeholder_image(340, 400)
-    placeholder_photo = CTkImage(placeholder_img, size=(350, 370))
-
-    # Create container
-    container = CTkFrame(window.preview_frame, fg_color=dark_color)
-    container.pack(pady=20, padx=20, fill='both', expand=True)
-
-    # Original frame with placeholder
-    original_frame = CTkFrame(container, fg_color=dark_color)
-    original_frame.pack(side='left', fill='both', expand=True, padx=10)
-    CTkLabel(original_frame, text="Original", font=bold14, text_color=app_name_color).pack(pady=5)
-    original_preview = CTkLabel(original_frame, image=placeholder_photo, text="")
-    original_preview.pack()
-
-    # Upscaled frame with placeholder
-    upscaled_frame = CTkFrame(container, fg_color=dark_color)
-    upscaled_frame.pack(side='right', fill='both', expand=True, padx=10)
-    CTkLabel(upscaled_frame, text="Upscaled Preview", font=bold14, text_color=app_name_color).pack(pady=5)
-    upscaled_preview = CTkLabel(upscaled_frame, image=placeholder_photo, text="")
-    upscaled_preview.pack()
-    
-    input_file_button = CTkButton(
-        master = window,
-        command  = open_files_action,
-        text     = "SELECT FILES",
-        width    = 140,
-        height   = 30,
-        font     = bold11,
-        border_width = 1,
-        fg_color     = "#282828",
-        text_color   = "#E0E0E0",
-        border_color = "#0096FF"
-        )
-    background.place(relx = 0.0, rely = 0.0, relwidth = 1.0, relheight = 0.42)
-    input_file_button.place(relx = 0.55, rely = 0.4, anchor = "center")
 
 
 def place_output_path_textbox():
@@ -3529,7 +3580,8 @@ def start_youtube_download():
 def on_app_close() -> None:
     window.grab_release()
     window.destroy()
-
+   
+    load_model_inference()
     global selected_AI_model
     global selected_AI_multithreading
     global selected_gpu
@@ -3540,7 +3592,7 @@ def on_app_close() -> None:
     global input_resize_factor
     global cpu_number
     global selected_audio_mode 
-
+    selected_audio_mode = "Disabled"
     AI_model_to_save          = f"{selected_AI_model}"
     AI_multithreading_to_save = f"{selected_AI_multithreading} threads"
     gpu_to_save               = selected_gpu
@@ -3599,7 +3651,7 @@ class App():
         self.background_label.place(relx=0  , rely=0, relwidth=1, relheight=1.5) 
         self.background_label.lower() 
       
-
+        load_model_inference()
         place_youtube_download_menu()
         place_loadFile_section(Master)
         place_output_path_textbox()

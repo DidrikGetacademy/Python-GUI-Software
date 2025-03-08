@@ -4,9 +4,10 @@ from PyInstaller.utils.hooks import collect_data_files
 
 a = Analysis(
     ['VideoEnchancer.py'],
-    pathex=['C:\\Users\\didri\\Desktop\\LearnReflect VideoEnchancer'],
+    pathex=[r'C:\Users\didri\Desktop\Programmering\Programvarer\LearnReflect VideoEnchancer System'],
     binaries=[],
-    datas=[(r"C:\Users\didri\Desktop\LearnReflect VideoEnchancer\Assets", "Assets"), (r"C:\Users\didri\Desktop\LearnReflect VideoEnchancer\AI-onnx", "AI-onnx")],
+    
+    datas=[(r"C:\Users\didri\Desktop\Programmering\Programvarer\LearnReflect VideoEnchancer System\Assets", "Assets"), (r"C:\Users\didri\Desktop\Programmering\Programvarer\LearnReflect VideoEnchancer System\AI-onnx", "AI-onnx")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -34,12 +35,12 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
-    icon=r"C:\Users\didri\Desktop\LearnReflect VideoEnchancer\Assets\icon.ico",
+    icon=r"C:\Users\didri\Desktop\Programmering\Programvarer\LearnReflect VideoEnchancer System\Assets\icon.ico",
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     uac_admin=False,  # Ensure this is False
     codesign_identity=None,
     entitlements_file=None,
-    manifest=r"C:\Users\didri\Desktop\LearnReflect VideoEnchancer\Program.manifest",
+    manifest=r"C:\Users\didri\Desktop\Programmering\Programvarer\LearnReflect VideoEnchancer System\Program.manifest",
 )
