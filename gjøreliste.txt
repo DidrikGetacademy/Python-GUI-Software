@@ -6,7 +6,7 @@
 
 4. sette opp video/tidslinje som beskriver hvor langt inn i videoen man er når man bruker slider i preview window. 
 
-5. evt lage en dropdown menu (tools) hvor man kan bytte mellom frames på hovedskjermen, for eksempel 1. frame er youtube video/youtube audio nedlastning, mens frame 2 fra listen er generate metadata (en smolagent som leser audioen, omgjør den til tekst. søker via api (youtube,ineternett) på videoer i lik kategori som har fått mye oppmerksomhet, deretter kan smolagenten outpute en detaljert [titel, beskrivelse, hashtag, keywords] eksempler utifra inhold fra teksten på videoen dem genererte metadata på.)
+5. evt lage en dropdown menu (tools) hvor man kan bytte mellom frames på hovedskjermen, for eksempel 1. frame er youtube video/youtube audio nedlastning, mens frame 2 fra listen er generate metadata (en smolagent som leser audioen fra video, omgjør den til tekst. søker via api (youtube,ineternett) på videoer i lik kategori som har fått mye oppmerksomhet, deretter kan smolagenten outpute en detaljert [titel, beskrivelse, hashtag, keywords] eksempler utifra inhold fra teksten på videoen dem genererte metadata på.)
 
 6.når jeg skal pakke systemet. så må jeg først pakke videoenchancer.py til en egen exe. sjekk (bulding folder)  deretter må jeg pakke  (bruker,inlogging,activation,registrating,accountmenu etc)  med sammen videoenehcancer.exe. ### Jeg må forsikre meg/løse det sånn at man ikke kan få tilgang til videoenchancer.exe uten og ha gått igjennom (account management og man har gyldig subscription). så jeg må finne ut en måte og låse videoenehcancer.exe sånn at det ikke kan kjøres hvor mindre man er logget inn fra en bruker som har aktiv subscription
 
@@ -34,3 +34,16 @@
 9.
 
 10.
+
+
+
+
+
+
+Thought:: Skal jeg gjøre programvaren en del av learnreflects som egt er (self developemt system) eller sette opp en egen nettside for programvaren.. blir litt tull og ha både butikk, programvare salg, brukersystem for selvutvikling på 1 nettside 
+en idee er jo evt å
+
+1. egen nettside for video oppskalerings programvaren.
+
+2.egen nettside learnreflect (fokusere på å bygge opp lernreflect med hovedfokus på selv utvikling, altså hvordan systemet for selv utvikling og tilgjenglighet av verktøy skal innholde/fungere for at bruker best mulig kan oppnå utvikling, samtidig skal hver bruker ha en AI Agent  som er en personlig utvikling assistent som hver bruker kan ha tilgang til som kan hjelpe med utvikling samtidig som også kan samhandle med learnreflect miljøet dems altså  agenten skal kunne sette opp mål og bruke verktøy for å samhandle med bruker systemet vis bruker trenger hjelp med det ) Learnreflect skal også ha 1 community butikk/brand som er halveis ferdig lagd
+
