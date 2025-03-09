@@ -1,0 +1,36 @@
+1. Sette opp ordentlig styling/utseende på programvaren på alle frames, fra brukerkonto,login,registering osv. + videoenchancer programvaren
+
+2. finne ut om cookies for å bruke ytdllp kan brukes generelt, altså ha 1 .txt cookie fil eller om hver bruker må hente ut sin egen youtube cookie på noe måte
+
+3. få trent ferdig unet modell for vokalisolering/evt bruke ferdig trente modeller for vokal isolering og audio enchancement som konverteres over til onnx format for å brukes i programvaren. evt raskere
+
+4. sette opp video/tidslinje som beskriver hvor langt inn i videoen man er når man bruker slider i preview window. 
+
+5. evt lage en dropdown menu (tools) hvor man kan bytte mellom frames på hovedskjermen, for eksempel 1. frame er youtube video/youtube audio nedlastning, mens frame 2 fra listen er generate metadata (en smolagent som leser audioen, omgjør den til tekst. søker via api (youtube,ineternett) på videoer i lik kategori som har fått mye oppmerksomhet, deretter kan smolagenten outpute en detaljert [titel, beskrivelse, hashtag, keywords] eksempler utifra inhold fra teksten på videoen dem genererte metadata på.)
+
+6.når jeg skal pakke systemet. så må jeg først pakke videoenchancer.py til en egen exe. sjekk (bulding folder)  deretter må jeg pakke  (bruker,inlogging,activation,registrating,accountmenu etc)  med sammen videoenehcancer.exe. ### Jeg må forsikre meg/løse det sånn at man ikke kan få tilgang til videoenchancer.exe uten og ha gått igjennom (account management og man har gyldig subscription). så jeg må finne ut en måte og låse videoenehcancer.exe sånn at det ikke kan kjøres hvor mindre man er logget inn fra en bruker som har aktiv subscription
+
+6. Gå igjennom og løse alle error, evt lage en error liste. og når alt dette er oppfylt og programvaren fungerer. så skal ikke flere ideer/endringer implementeres før programvaren er ute. deretter evt implementere system for å kunne oppdatere programvaren i fremtiden dersom endringer eller bugs skal fikses. 
+
+
+[ERROR LISTE] --> Oppdateres underveis og tas til slutt for mer effeketivitet
+
+1.
+
+2.
+
+3.
+
+4.
+
+5.
+
+6.
+
+7.
+
+8.
+
+9.
+
+10.
