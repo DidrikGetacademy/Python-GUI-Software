@@ -268,12 +268,64 @@ class SmolAgent:
     def __init__(self, parent_container):
         print("Initalizing SmolAgent ")
         self.parent_container = parent_container
+        self.uploaded_files = []  
+
+        self.container = CTkFrame(
+                    master=self.parent_container,
+                    fg_color="#000000",  
+                    border_width=2,
+                    border_color="#404040",  
+                    corner_radius=10
+                )
+        self.container.place(relx=0.34, rely=0.85, relwidth=0.3, relheight=0.5, anchor="center")
+        self.create_file_selection_menu()  
+        self.create_metadata_button()      
+
+    def create_file_selection_menu(self):
+            """Create dropdown menu for uploaded files"""
+            self.file_menu_var = StringVar(value="No files uploaded")
+            self.file_menu = CTkOptionMenu(
+                master=self.container,
+                variable=self.file_menu_var,
+                values=[],
+                width=200,
+                height=30,
+                font=bold11,
+                dropdown_font=bold11,
+                fg_color=widget_background_color,
+                button_color=widget_background_color
+            )
+            self.file_menu.place(relx=column2_x - 0.44, rely=row4_y - 0.75, anchor="center")
 
 
+    def update_file_list(self, new_files):
+        """Update both internal list and dropdown menu"""
+        self.uploaded_files.extend(new_files)
+        file_names = [os_path_basename(f) for f in self.uploaded_files]
+        self.file_menu.configure(values=file_names)
+        if file_names:
+            self.file_menu_var.set(file_names[0])
 
-
-
-
+    def clear_file_list(self):
+        """Reset dropdown to empty state"""
+        self.uploaded_files = []
+        self.file_menu.configure(values=[])
+        self.file_menu_var.set("No files uploaded")
+        
+    def create_metadata_button(self):
+        """Create metadata generation button"""
+        self.metadata_btn = CTkButton(
+            master=self.container,
+            text="Generate Metadata",
+            width=140,
+            height=30,
+            font=bold11,
+            border_width=1,
+            fg_color="#282828",
+            text_color="#E0E0E0",
+            border_color="#0096FF"
+        )
+        self.metadata_btn.place(relx=column2_x - 0.14, rely=row4_y - 0.75, anchor="center")
 
 
 
@@ -424,7 +476,7 @@ def load_model_inference():
             print("Resolution must be between 1% and 100%")
             return
 
-        resize_factor = resolution_percentage / 100.0  
+        resize_factor = float(resolution_percentage / 100.0)  
 
         current_config = (
             selected_AI_model,
@@ -493,13 +545,9 @@ def load_model_if_needed(model_name):
             preview_ai_instance = AI(
                 model_name,
                 selected_gpu,
-                int(float(selected_input_resize_factor.get())),
-                float(selected_VRAM_limiter.get())
+                int(float(selected_input_resize_factor.get())),  
+                int(float(selected_VRAM_limiter.get())) 
             )
-
-            dummy_input = np.zeros((512, 512, 3), dtype=np.uint8)
-            for _ in range(2):
-                _ = preview_ai_instance.AI_orchestration(dummy_input)
 
             current_loaded_model = model_name
             info_message.set(f"Model: {model_name} Ready!")
@@ -662,7 +710,7 @@ def select_AI_from_menu(selected_option: str) -> None:
     if selected_option == current_loaded_model or selected_option in AI_LIST_SEPARATOR:
         return
     
-    window.preview_button.configure(state=DISABLED)
+
     selected_AI_model = selected_option
     info_message.set(f"Loading {selected_option}...")
     update_file_widget(1, 2, 3)
@@ -676,7 +724,6 @@ def select_AI_from_menu(selected_option: str) -> None:
         daemon=True
     )
     model_loading_thread.start()
-    window.after(100, check_model_loading_progress)
 
 
 
@@ -1458,7 +1505,7 @@ class FileWidget(CTkScrollableFrame):
         label.pack(side="left", fill="x", expand=True)
 
 
-        preview_button = CTkButton(
+        window.preview_button = CTkButton(
             file_frame,
             text="Preview",
             width=80,
@@ -1466,7 +1513,7 @@ class FileWidget(CTkScrollableFrame):
             font=bold11,
             command=lambda path=file_path: self.preview_file(path)
         )
-        preview_button.pack(side="right", padx=(0, 10))
+        window.preview_button.pack(side="right", padx=(0, 10))
 
         return file_frame  
 
@@ -1574,7 +1621,7 @@ class FileWidget(CTkScrollableFrame):
 
                 
           
-            file_infos += (
+                file_infos += (
                                 f"AI input ({self.input_resize_factor}%) ➜ {input_resized_width}x{input_resized_height} \n"
                                 f"AI output (x{self.upscale_factor}) ➜ {upscaled_width}x{upscaled_height} \n"
                             )
@@ -2855,7 +2902,7 @@ def get_upscale_factor() -> int:
 
 
 def open_files_action():
-    global selected_file_list  
+    global selected_file_list, Smol_agent  
     def check_supported_selected_files(uploaded_file_list: list) -> list:
         return [file for file in uploaded_file_list if any(supported_extension in file for supported_extension in supported_file_extensions)]
 
@@ -2872,6 +2919,8 @@ def open_files_action():
     if supported_files_counter > 0:
         if supported_files_list:
                 selected_file_list = supported_files_list
+                Smol_agent.update_file_list(supported_files_list)
+                update_file_widget(1, 2, 3)  
         upscale_factor = get_values_for_file_widget()
 
         global file_widget
@@ -3426,24 +3475,26 @@ def place_input_output_resolution_textboxs():
 global youtube_progress_var
 def place_youtube_download_menu():
     global youtube_link_entry, youtube_output_path_entry
-    bg_image = Image.open("./Assets/111.jpg").resize((500, 150))  
-    bg_image_tk = CTkImage(bg_image, size=(500, 150))  
+    bg_image = Image.open("./Assets/youtubebackground(1).png").resize((575, 300))  
+    bg_image_tk = CTkImage(bg_image, size=(575, 300))  
 
     youtube_frame = CTkFrame(
         master=window,
         fg_color=dark_color,
-        width=500,
-        height=150,
-        corner_radius=10
+        width=575,
+        height=300,
+        corner_radius=10,
+        bg_color='transparent'
     )
-    youtube_frame.place(relx=0.3295, rely=0.493, anchor="center")
+    youtube_frame.place(relx=0.3395, rely=0.535, anchor="center")
 
 
     bg_label = CTkLabel(
         master=youtube_frame,
         image=bg_image_tk,
         width=500,
-        height=150
+        height=300,
+         bg_color='transparent'
     )
     bg_label.place(relx=0, rely=0)  
     bg_label.image = bg_image_tk
@@ -3465,31 +3516,43 @@ def place_youtube_download_menu():
         text="YouTube URL:",
         font=bold12,
         text_color="#C0C0C0",
-    ).place(relx=0.18, rely=0.2, anchor="w")
+        bg_color='transparent',
+        fg_color="black",
+        justify="center"
+    ).place(relx=0.064, rely=0.22, anchor="w")
 
     youtube_link_entry = CTkEntry(
         master=youtube_frame,
         width=300,
-        height=25,
+        height=30,
         corner_radius=5,
-        font=bold11
-    ).place(relx=0.18, rely=0.45, anchor="w")
+        font=bold11,
+        bg_color="black",
+        fg_color="black",
+        justify="center"
+    ).place(relx=0.20, rely=0.22, anchor="w")
 
     CTkLabel(
         master=youtube_frame,
         text="Save to:",
         font=bold12,
         text_color="#C0C0C0",
-    ).place(relx=0.18, rely=0.65, anchor="w")
+        bg_color="black",
+        width=120,
+        height=23,
+        justify="center"
+    ).place(relx=0.06, rely=0.123, anchor="w")
 
     youtube_output_path_entry = CTkEntry(
         master=youtube_frame,
-        width=200,
+        width=300,
         height=25,
         corner_radius=5,
-        font=bold11
+        font=bold11,
+        fg_color="black",
+        bg_color="black"
     )
-    youtube_output_path_entry.place(relx=0.18, rely=0.8, anchor="w")
+    youtube_output_path_entry.place(relx=0.376, rely=0.125, anchor="w")
     youtube_output_path_entry.insert(0,DOCUMENT_PATH)
 
     CTkButton(
@@ -3497,9 +3560,11 @@ def place_youtube_download_menu():
         text="Choose path",
         width=80,
         height=25,
+        fg_color="black",
+        border_color="white",
         font=bold11,
         command=lambda: select_youtube_output_path()
-    ).place(relx=0.8, rely=0.83, anchor="w")
+    ).place(relx=0.722, rely=0.125, anchor="w")
 
 
     CTkButton(
@@ -3509,10 +3574,10 @@ def place_youtube_download_menu():
         height=30,
         font=bold11,
         command=lambda: start_youtube_download(),
-        fg_color="#282828",
-        border_color="#0096FF",
+        fg_color="black",
+        border_color="white",
         border_width=1
-    ).place(relx=0.96, rely=0.45, anchor="e")
+    ).place(relx=0.86, rely=0.22, anchor="e")
 
 def select_youtube_output_path():
     path= filedialog.askdirectory()
@@ -3650,7 +3715,7 @@ class App():
         self.background_label = CTkLabel(Master, image=self.bg_image, fg_color="black")
         self.background_label.place(relx=0  , rely=0, relwidth=1, relheight=1.5) 
         self.background_label.lower() 
-      
+        self.Smol_agent = SmolAgent(Master)
         load_model_inference()
         place_youtube_download_menu()
         place_loadFile_section(Master)
@@ -3667,7 +3732,8 @@ class App():
         place_video_extension_menu()
         place_message_label()
         place_upscale_button()
-    
+        global Smol_agent
+        Smol_agent = self.Smol_agent 
 
         
         
@@ -3690,7 +3756,7 @@ if __name__ == "__main__":
     selected_VRAM_limiter   = StringVar()
     selected_cpu_number     = StringVar()
 
-
+ 
     global selected_file_list
     global selected_AI_model
     global selected_gpu
@@ -3704,7 +3770,6 @@ if __name__ == "__main__":
     global cpu_number
 
     selected_file_list = []
-
     selected_AI_model          = default_AI_model
     selected_gpu               = default_gpu
     selected_image_extension   = default_image_extension
