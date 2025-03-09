@@ -43,7 +43,14 @@
 Thought:: Skal jeg gjøre programvaren en del av learnreflects som egt er (self developemt system) eller sette opp en egen nettside for programvaren.. blir litt tull og ha både butikk, programvare salg, brukersystem for selvutvikling på 1 nettside 
 en idee er jo evt å
 
-1. egen nettside for video oppskalerings programvaren.
+1. Egen nettside for video oppskalerings programvaren.
+nettside: http://aicognetics.com/
 
-2.egen nettside learnreflect (fokusere på å bygge opp lernreflect med hovedfokus på selv utvikling, altså hvordan systemet for selv utvikling og tilgjenglighet av verktøy skal innholde/fungere for at bruker best mulig kan oppnå utvikling, samtidig skal hver bruker ha en AI Agent  som er en personlig utvikling assistent som hver bruker kan ha tilgang til som kan hjelpe med utvikling samtidig som også kan samhandle med learnreflect miljøet dems altså  agenten skal kunne sette opp mål og bruke verktøy for å samhandle med bruker systemet vis bruker trenger hjelp med det ) Learnreflect skal også ha 1 community butikk/brand som er halveis ferdig lagd
 
+2. Egen nettside learnreflect (fokusere på å bygge opp lernreflect med hovedfokus på selv utvikling, altså hvordan systemet for selv utvikling og tilgjenglighet av verktøy skal innholde/fungere for at bruker best mulig kan oppnå utvikling, samtidig skal hver bruker ha en AI Agent  som er en personlig utvikling assistent som hver bruker kan ha tilgang til som kan hjelpe med utvikling samtidig som også kan samhandle med learnreflect miljøet dems altså  agenten skal kunne sette opp mål og bruke verktøy for å samhandle med bruker systemet vis bruker trenger hjelp med det ) Learnreflect skal også ha 1 community butikk/brand som er halveis ferdig lagd
+Nettside: https://learnreflects.com/
+
+
+
+3. Egen nettside med fokus på distrubering av AI-Agenter for bedrifter. salg av forskjellige agenter med forskjellige evner innenfor forskjellige bedrifts kategorier. 
+nettside: http://aiadoptionagents.com/
