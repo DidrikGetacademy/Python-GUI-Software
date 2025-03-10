@@ -44,7 +44,7 @@ Thought:: Skal jeg gjøre programvaren en del av learnreflects som egt er (self 
 en idee er jo evt å
 
 1. Egen nettside for video oppskalerings programvaren.
-nettside: http://aicognetics.com/
+nettside: http://aicognetics.com/ (navnet passer ikke helt, evt kjøpe nytt domain eller bytte navn om mulig.)
 
 
 2. Egen nettside learnreflect (fokusere på å bygge opp lernreflect med hovedfokus på selv utvikling, altså hvordan systemet for selv utvikling og tilgjenglighet av verktøy skal innholde/fungere for at bruker best mulig kan oppnå utvikling, samtidig skal hver bruker ha en AI Agent  som er en personlig utvikling assistent som hver bruker kan ha tilgang til som kan hjelpe med utvikling samtidig som også kan samhandle med learnreflect miljøet dems altså  agenten skal kunne sette opp mål og bruke verktøy for å samhandle med bruker systemet vis bruker trenger hjelp med det ) Learnreflect skal også ha 1 community butikk/brand som er halveis ferdig lagd

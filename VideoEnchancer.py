@@ -109,6 +109,7 @@ from customtkinter import (
     CTk,
     CTkButton,
     CTkFrame,
+    CTkComboBox,
     CTkSlider,
     CTkEntry,
     CTkFont,
@@ -258,12 +259,357 @@ supported_video_extensions = [
 ]
 
 
+####Youtube Download#####
+global youtube_progress_var
+def place_youtube_download_menu(parent_container):
+    global youtube_link_entry, youtube_output_path_entry ,video_format_var, audio_format_var
+    bg_image = Image.open("./Assets/youtubebackground(1).png").resize((575, 300))  
+    bg_image_tk = CTkImage(bg_image, size=(575, 300))  
+
+    youtube_frame = CTkFrame(
+        master=parent_container,
+        fg_color=dark_color,
+        width=575,
+        height=300,
+        corner_radius=10,
+        bg_color='transparent'
+    )
+    youtube_frame.place(relx=0.3395, rely=0.535, anchor="center")
+
+
+    bg_label = CTkLabel(
+        master=youtube_frame,
+        image=bg_image_tk,
+        width=500,
+        height=300,
+         bg_color='transparent'
+    )
+    bg_label.place(relx=0, rely=0)  
+    bg_label.image = bg_image_tk
+
+
+
+    progress_label =CTkLabel(
+        master=youtube_frame,
+        textvariable=youtube_progress_var,
+        font=bold12,
+        text_color="#00FF00"
+    )
+    progress_label.place(relx=0.95, rely=0.3, anchor="center")
+
+
+    #input for the youtubelink
+    CTkLabel(
+        master=youtube_frame,
+        text="YouTube URL:",
+        font=bold12,
+        text_color="#C0C0C0",
+        bg_color='transparent',
+        fg_color="black",
+        justify="center"
+    ).place(relx=0.064, rely=0.22, anchor="w")
+
+
+
+
+
+ 
+    CTkLabel(
+        master=youtube_frame,
+        text="Save to:",
+        font=bold12,
+        text_color="#C0C0C0",
+        bg_color="black",
+        width=120,
+        height=23,
+        justify="center"
+    ).place(relx=0.06, rely=0.123, anchor="w")
+
+    youtube_output_path_entry = CTkEntry(
+        master=youtube_frame,
+        width=300,
+        height=25,
+        corner_radius=5,
+        font=bold11,
+        fg_color="black",
+        bg_color="black"
+    )
+    youtube_output_path_entry.place(relx=0.376, rely=0.125, anchor="w")
+    youtube_output_path_entry.insert(0,DOCUMENT_PATH)
+
+    CTkButton(
+        master=youtube_frame,
+        text="Choose path",
+        width=80,
+        height=25,
+        fg_color="black",
+        border_color="white",
+        font=bold11,
+        command=lambda: select_youtube_output_path()
+    ).place(relx=0.722, rely=0.125, anchor="w")
+
+
+    CTkButton(
+        master=youtube_frame,
+        text="Download",
+        width=80,
+        height=30,
+        font=bold11,
+        command=lambda: start_youtube_download(),
+        fg_color="black",
+        border_color="white",
+        border_width=1
+    ).place(relx=0.86, rely=0.22, anchor="e")
+
+    CTkLabel(
+        master=youtube_frame,
+        text="Video Format:",
+        font=bold12,
+        text_color="#C0C0C0",
+        bg_color="transparent",
+    ).place(relx=0.064, rely=0.35, anchor="w")
+
+    video_format_var = StringVar()
+
+
+    video_format_dropdown = CTkComboBox(
+        master=youtube_frame,
+        variable=video_format_var,
+        values=["Enter Link First..."],
+        width=200
+    )
+    video_format_dropdown.place(relx=0.20, rely=0.35, anchor="w")
+
+
+
+    def  update_fetch_button_state(event=None):
+        url = youtube_link_entry.get()
+        if "youtube.com" in url or "youtu.de" in url:
+            fetch_button.configure(state="normal")  
+        else:       
+            fetch_button.configure(state="disabled")
+       
+
+
+    youtube_link_entry = CTkEntry(
+        master=youtube_frame,
+        width=300,
+        height=30,
+        corner_radius=5,
+        font=bold11,
+        bg_color="black",
+        fg_color="black",
+        justify="center"
+    )
+    youtube_link_entry.place(relx=0.20, rely=0.22, anchor="w") 
+    youtube_link_entry.bind("<KeyRelease>", update_fetch_button_state)
+
+
+
+
+
+    CTkLabel(
+        master=youtube_frame,
+        text="Audio Format:",
+        font=bold12,
+        text_color="#C0C0C0",
+        bg_color="transparent",
+    ).place(relx=0.064, rely=0.42, anchor="w")
+
+
+    audio_format_var = StringVar()
+    audio_format_dropdown = CTkComboBox(
+        master=youtube_frame,
+        variable=audio_format_var,
+        values=["Enter Link First..."],
+        width=200
+    )
+    audio_format_dropdown.place(relx=0.20, rely=0.42, anchor="w")
+
+    def update_format_list():
+        url = youtube_link_entry.get()
+        if url:
+            video_formats, audio_formats = get_available_formats(url)
+
+            # Set values in dropdowns
+            video_format_dropdown.configure(values=video_formats if video_formats else ["No video formats available"])
+            audio_format_dropdown.configure(values=audio_formats if audio_formats else ["No audio formats available"])
+
+            # Select the first available format automatically
+            if video_formats:
+                video_format_var.set(video_formats[0])
+            if audio_formats:
+                audio_format_var.set(audio_formats[0])
+
+
+    
+    fetch_button = CTkButton(
+        master=youtube_frame,
+        text="Fetch Details",
+        width=100,
+        height=30,
+        font=bold11,
+        command=update_format_list,
+        fg_color="black",
+        border_color="white",
+        border_width=1,
+        state="disabled"  
+    )
+    fetch_button.place(relx=0.86, rely=0.28, anchor="e")
+
+    def select_youtube_output_path():
+            path= filedialog.askdirectory()
+            if path:
+                youtube_output_path_entry.delete(0,'end')
+                youtube_output_path_entry.insert(0,path)
+
+
+
+
+
+####YOUTUBE DOWNLOADING####
+
+def get_available_formats(youtube_url):
+    try: 
+        ydl_opts = {'quiet': True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(youtube_url, download=False)
+            formats = info.get('formats', [])
+
+            video_formats = []
+            audio_formats = []
+
+            for f in formats:
+                if f.get('vcodec') != 'none' and f.get('acodec') == 'none':  # Video-only
+                    video_formats.append(f"{f['format_id']} - {f.get('resolution', 'Unknown')} ({f['ext']})")
+                elif f.get('acodec') != 'none' and f.get('vcodec') == 'none':  # Audio-only
+                    audio_formats.append(f"{f['format_id']} - {f.get('abr', 'Unknown')}kbps ({f['ext']})")
+
+            return video_formats, audio_formats
+    except Exception as e:
+        print(f"Error fetching formats: {e}")
+        return [], []
 
 
 
 
 
 
+def download_youtube_link(youtube_url,output_path, progress_callback=None):
+    video_format = video_format_var.get().split(" - ")[0]  
+    audio_format = audio_format_var.get().split(" - ")[0]  
+
+    ydl_opts ={
+        "outtmpl": f'{output_path}/%(title)s.%(ext)s',
+        'format': f"{video_format}{audio_format}/bestaudio",
+        'merge_output_format': 'mp4',
+        'progress_hooks': [progress_callback] if progress_callback else [],
+        'noprogress': True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+             ydl.download([youtube_url])
+        return "Download Complete!"
+    except Exception as e:
+        return f"Error: {str(e)}"
+    
+def update_progress(d):
+    if d['status'] == 'downloading':
+        percent = d.get('_percent_str', '0%')
+        window.after(0, lambda: youtube_progress_var.set(percent))
+
+def download_thread(youtube_url, output_path):
+    try:
+        info_message.set("Downloading....")
+        message = download_youtube_link(youtube_url, output_path, update_progress)
+        if message == "Download Complete!":
+            info_message.set(message)
+        else: info_message.set(message)
+    except Exception as e:
+        info_message.set(f"Error: {str(e)}")
+    finally:
+        youtube_progress_var.set("")
+
+def start_youtube_download():
+    global youtube_link_entry, youtube_output_path_entry
+    url=youtube_link_entry.get()
+    output_path = youtube_output_path_entry.get()
+
+    if not url or 'youtube.com' not in url and 'youtube.be' not in url:
+        info_message.set("Invalid YouTube URL!")
+        return
+    
+    if not output_path:
+        info_message.set("Choose a folder for saving!")
+        return
+    
+    youtube_progress_var.set("0%")
+    Thread(target=download_thread, args=(url, output_path)).start()
+
+        
+
+
+
+
+### a class with list of available tools that changes window for each tool. ex, youtube download, smolagent, 
+class ToolWindowClass:
+    def __init__(self, master):
+        self.master = master
+  
+        self.container = CTkFrame(master, fg_color="transparent")
+        self.container.place(relx=0.595, rely=0.725, relwidth=0.8, relheight=0.6, anchor="center")
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.menu_frame = CTkFrame(self.container, fg_color="transparent")
+        self.menu_frame.pack(side="top", fill="x", pady=(0, 10))
+
+  
+        self.tool_list = ['SmolAgent', 'YouTube Downloader']
+        self.tool_menu_var = StringVar(value=self.tool_list[0])
+        self.tool_menu = CTkOptionMenu(
+            master=self.menu_frame,
+            variable=self.tool_menu_var,
+            values=self.tool_list,
+            command=self.on_tool_select,
+            width=150,
+            fg_color="#282828",
+            button_color="#404040",
+            text_color="#FFFFFF"
+        )
+        self.tool_menu.pack(side="top", pady=10) 
+
+        self.content_frame = CTkFrame(self.container, fg_color="transparent")
+        self.content_frame.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=0.8)
+
+
+
+  
+        self.on_tool_select(self.tool_list[0])
+
+    def on_tool_select(self, selected_tool):
+     
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+        if selected_tool == 'SmolAgent':
+            self.create_smol_agent()
+        elif selected_tool == 'YouTube Downloader':
+            self.create_youtube_downloader()
+
+    def create_smol_agent(self):
+
+        self.smol_agent = SmolAgent(self.content_frame)
+        self.smol_agent.container.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def create_youtube_downloader(self):
+        place_youtube_download_menu(self.content_frame)
+
+
+
+
+####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
+###Generate AI video.
+###Generate AI Img.
 class SmolAgent:
     def __init__(self, parent_container):
         print("Initalizing SmolAgent ")
@@ -282,7 +628,7 @@ class SmolAgent:
         self.create_metadata_button()      
 
     def create_file_selection_menu(self):
-            """Create dropdown menu for uploaded files"""
+     
             self.file_menu_var = StringVar(value="No files uploaded")
             self.file_menu = CTkOptionMenu(
                 master=self.container,
@@ -299,7 +645,7 @@ class SmolAgent:
 
 
     def update_file_list(self, new_files):
-        """Update both internal list and dropdown menu"""
+
         self.uploaded_files.extend(new_files)
         file_names = [os_path_basename(f) for f in self.uploaded_files]
         self.file_menu.configure(values=file_names)
@@ -346,7 +692,7 @@ class VideoPreview:
         self.fps = int(self.cap.get(cv2.CAP_PROP_FPS))
         self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         
-        # Create and place the timeline slider within the parent container
+ 
         self.timeline_slider = CTkSlider(
             self.parent_container,
             from_=0,
@@ -355,7 +701,6 @@ class VideoPreview:
         )
         self.timeline_slider.pack(fill="x", padx=20, pady=10, after=self.upscaled_label)
         
-        # Load the first frame
         self.update_frame_preview(0)
         print("VideoPreview initialized successfully.")
 
@@ -369,7 +714,7 @@ class VideoPreview:
         self.original_label.configure(image=original_image)
         self.upscaled_label.configure(image=upscaled_image)
 
-        # Ensure size remains fixed
+    
         self.original_label.configure(width=preview_size[0], height=preview_size[1])
         self.upscaled_label.configure(width=preview_size[0], height=preview_size[1])
 
@@ -383,7 +728,7 @@ class VideoPreview:
 
     def update_frame_preview(self, frame_number):
         print(f"Updating frame preview for frame {frame_number}...")
-        self.timeline_slider.configure(state='disabled')   # Disable the slider while upscaling is in progress
+        self.timeline_slider.configure(state='disabled')   
 
         self.loading_icon = LoadingIcon(self.parent_container)
         self.loading_icon.start()
@@ -405,16 +750,16 @@ class VideoPreview:
                 if success:
                     print(f"Frame {frame_number} read successfully from video.")
                     
-                    # Resize original frame to target size
+               
                     original_frame = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_AREA)
-                    upscaled_frame = self.process_frame(original_frame)  # Upscale the frame
+                    upscaled_frame = self.process_frame(original_frame)  
                     frame_cache[frame_number] = (original_frame, upscaled_frame)
                     print(f"Frame {frame_number} processed and added to cache.")
                 else:
                     print(f"Failed to read frame {frame_number} from video.")
                     return 
             
-            # Update the GUI and then re-enable the slider
+            
             self.parent_container.after(0, lambda: self.update_gui(original_frame, upscaled_frame))
             self.parent_container.after(0, self.loading_icon.stop)
             print(f"Stopped loading animation for frame {frame_number}.")
@@ -439,23 +784,17 @@ class VideoPreview:
         return frame
 
     def convert_frame_to_ctk(self, frame):
-        preview_width, preview_height = 340, 400  # Match preview container size
+        preview_width, preview_height = 340, 400  
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         resized_frame = cv2.resize(rgb_frame, (preview_width, preview_height), interpolation=cv2.INTER_AREA)
         
         pil_image = Image.fromarray(resized_frame)
-        return CTkImage(pil_image, size=(preview_width, preview_height))  # Prevent auto-scaling
+        return CTkImage(pil_image, size=(preview_width, preview_height))  
 
     def close(self):
         print("Releasing video capture and destroying slider...")
         self.cap.release()
         self.timeline_slider.destroy()
-
-
-
-
-
-
 
 
 
@@ -724,12 +1063,6 @@ def select_AI_from_menu(selected_option: str) -> None:
         daemon=True
     )
     model_loading_thread.start()
-
-
-
-
-
-
 
 
 
@@ -1808,7 +2141,6 @@ def create_active_button(
 
 
 
-
 # File Utils functions ------------------------
 def create_dir(name_dir: str) -> None:
     if os_path_exists(name_dir):
@@ -1825,7 +2157,6 @@ def image_read(file_path: str) -> numpy_ndarray:
 def image_write(file_path: str, file_data: numpy_ndarray) -> None: 
     _, file_extension = os_path_splitext(file_path)
     opencv_imencode(file_extension, file_data)[1].tofile(file_path)
-
 
 
 def prepare_output_image_filename(
@@ -1867,7 +2198,6 @@ def prepare_output_image_filename(
     return output_path
 
 
-
 def prepare_output_video_frame_filename(
         frame_path: str, 
         selected_AI_model: str, 
@@ -1899,7 +2229,6 @@ def prepare_output_video_frame_filename(
     output_path += to_append
 
     return output_path
-
 
 
 def prepare_output_video_filename(
@@ -1946,7 +2275,6 @@ def prepare_output_video_filename(
     return output_path
 
 
-
 def prepare_output_video_directory_name(
         video_path: str, 
         selected_output_path: str,
@@ -1980,9 +2308,6 @@ def prepare_output_video_directory_name(
     output_path += to_append
 
     return output_path
-
-
-
 
 
 
@@ -2050,9 +2375,6 @@ def extract_video_frames(
     if len(extracted_frames) > 0: save_extracted_frames(extracted_frames_paths, extracted_frames, cpu_number)
     
     return video_frames_list
-
-
-
 
 
 
@@ -2125,7 +2447,6 @@ def check_video_upscaling_resume(
         return False
 
 
-
 def get_video_frames_for_upscaling_resume(
         target_directory: str,
         selected_AI_model: str,
@@ -2140,9 +2461,6 @@ def get_video_frames_for_upscaling_resume(
     original_frames_path = natsorted([os_path_join(target_directory, file) for file in original_frames_path])
 
     return original_frames_path
-
-
-
 
 
 
@@ -2169,10 +2487,6 @@ def calculate_time_to_complete_video(
         time_left = f"{time_left}{seconds_left:02d}s"
 
     return time_left        
-
-
-
-
 
 
 
@@ -2232,8 +2546,6 @@ def interpolate_images_and_save(
 
 
 
-
-
 def manage_upscaled_video_frame_save_async(
         upscaled_frame: numpy_ndarray,
         starting_frame: numpy_ndarray,
@@ -2265,8 +2577,6 @@ def manage_upscaled_video_frame_save_async(
 
 
 
-
-
 def update_process_status_videos(
         processing_queue: multiprocessing_Queue, 
         file_number: int, 
@@ -2281,9 +2591,6 @@ def update_process_status_videos(
         if remaining_time != "":
             percent_complete = (frame_index + 1) / how_many_frames * 100 
             write_process_status(processing_queue, f"{file_number}. Upscaling video {percent_complete:.2f}% ({remaining_time})")
-
-
-
 
 
 
@@ -2310,8 +2617,6 @@ def copy_file_metadata(
         subprocess_run(exiftool_cmd, check = True, shell = "False")
     except:
         pass
-
-
 
 
 
@@ -2435,14 +2740,6 @@ def upscale_button_command() -> None:
         thread_wait.start()
 
 
-
-
-
-
-
-
-
-
 # ORCHESTRATOR
 def upscale_orchestrator(
         processing_queue: multiprocessing_Queue,
@@ -2510,13 +2807,6 @@ def upscale_orchestrator(
 
     except Exception as exception:
         write_process_status(processing_queue, f"{ERROR_STATUS} {str(exception)}")
-
-
-
-
-
-
-
 
 
 
@@ -3472,172 +3762,6 @@ def place_input_output_resolution_textboxs():
     option_menu.place(relx = column_3,     rely = widget_row,         anchor = "center")
 
 
-global youtube_progress_var
-def place_youtube_download_menu():
-    global youtube_link_entry, youtube_output_path_entry
-    bg_image = Image.open("./Assets/youtubebackground(1).png").resize((575, 300))  
-    bg_image_tk = CTkImage(bg_image, size=(575, 300))  
-
-    youtube_frame = CTkFrame(
-        master=window,
-        fg_color=dark_color,
-        width=575,
-        height=300,
-        corner_radius=10,
-        bg_color='transparent'
-    )
-    youtube_frame.place(relx=0.3395, rely=0.535, anchor="center")
-
-
-    bg_label = CTkLabel(
-        master=youtube_frame,
-        image=bg_image_tk,
-        width=500,
-        height=300,
-         bg_color='transparent'
-    )
-    bg_label.place(relx=0, rely=0)  
-    bg_label.image = bg_image_tk
-
-
-
-    progress_label =CTkLabel(
-        master=youtube_frame,
-        textvariable=youtube_progress_var,
-        font=bold12,
-        text_color="#00FF00"
-    )
-    progress_label.place(relx=0.95, rely=0.3, anchor="center")
-
-
-    #input for the youtubelink
-    CTkLabel(
-        master=youtube_frame,
-        text="YouTube URL:",
-        font=bold12,
-        text_color="#C0C0C0",
-        bg_color='transparent',
-        fg_color="black",
-        justify="center"
-    ).place(relx=0.064, rely=0.22, anchor="w")
-
-    youtube_link_entry = CTkEntry(
-        master=youtube_frame,
-        width=300,
-        height=30,
-        corner_radius=5,
-        font=bold11,
-        bg_color="black",
-        fg_color="black",
-        justify="center"
-    ).place(relx=0.20, rely=0.22, anchor="w")
-
-    CTkLabel(
-        master=youtube_frame,
-        text="Save to:",
-        font=bold12,
-        text_color="#C0C0C0",
-        bg_color="black",
-        width=120,
-        height=23,
-        justify="center"
-    ).place(relx=0.06, rely=0.123, anchor="w")
-
-    youtube_output_path_entry = CTkEntry(
-        master=youtube_frame,
-        width=300,
-        height=25,
-        corner_radius=5,
-        font=bold11,
-        fg_color="black",
-        bg_color="black"
-    )
-    youtube_output_path_entry.place(relx=0.376, rely=0.125, anchor="w")
-    youtube_output_path_entry.insert(0,DOCUMENT_PATH)
-
-    CTkButton(
-        master=youtube_frame,
-        text="Choose path",
-        width=80,
-        height=25,
-        fg_color="black",
-        border_color="white",
-        font=bold11,
-        command=lambda: select_youtube_output_path()
-    ).place(relx=0.722, rely=0.125, anchor="w")
-
-
-    CTkButton(
-        master=youtube_frame,
-        text="Download",
-        width=80,
-        height=30,
-        font=bold11,
-        command=lambda: start_youtube_download(),
-        fg_color="black",
-        border_color="white",
-        border_width=1
-    ).place(relx=0.86, rely=0.22, anchor="e")
-
-def select_youtube_output_path():
-    path= filedialog.askdirectory()
-    if path:
-        youtube_output_path_entry.delete(0,'end')
-        youtube_output_path_entry.insert(0,path)
-
-
-
-
-####YOUTUBE DOWNLOADING####
-def download_youtube_link(youtube_url,output_path, progress_callback=None):
-    ydl_opts ={
-        "outtmpl": f'{output_path}/%(title)s.%(ext)s',
-        'format': 'bestvideo+bestaudio/best',
-        'merge_output_format': 'mp4',
-        'progress_hooks': [progress_callback] if progress_callback else [],
-        'noprogress': True,
-    }
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-             ydl.download([youtube_url])
-        return "Download Complete!"
-    except Exception as e:
-        return f"Error: {str(e)}"
-    
-def update_progress(d):
-    if d['status'] == 'downloading':
-        percent = d.get('_percent_str', '0%')
-        window.after(0, lambda: youtube_progress_var.set(percent))
-
-def download_thread(youtube_url, output_path):
-    try:
-        info_message.set("Downloading....")
-        success, message = download_youtube_link(youtube_url, output_path, update_progress)
-        if success:
-            info_message.set(message)
-        else: info_message.set(message)
-    except Exception as e:
-        info_message.set(f"Error: {str(e)}")
-    finally:
-        youtube_progress_var.set("")
-
-def start_youtube_download():
-    url=youtube_link_entry.get()
-    output_path = youtube_output_path_entry.get()
-
-    if not url or 'youtube.com' not in url and 'youtube.be' not in url:
-        info_message.set("Invalid YouTube URL!")
-        return
-    
-    if not output_path:
-        info_message.set("Choose a folder for saving!")
-        return
-    
-    youtube_progress_var.set("0%")
-    Thread(target=download_thread, args=(url, output_path)).start()
-
-        
-
 
 
 
@@ -3715,9 +3839,11 @@ class App():
         self.background_label = CTkLabel(Master, image=self.bg_image, fg_color="black")
         self.background_label.place(relx=0  , rely=0, relwidth=1, relheight=1.5) 
         self.background_label.lower() 
-        self.Smol_agent = SmolAgent(Master)
+        self.ToolWindowClass = ToolWindowClass(Master)
+        self.ToolWindowClass.create_widgets()
+      #  self.Smol_agent = SmolAgent(Master)
         load_model_inference()
-        place_youtube_download_menu()
+      #  place_youtube_download_menu()
         place_loadFile_section(Master)
         place_output_path_textbox()
         place_AI_menu()
@@ -3732,8 +3858,8 @@ class App():
         place_video_extension_menu()
         place_message_label()
         place_upscale_button()
-        global Smol_agent
-        Smol_agent = self.Smol_agent 
+       # global Smol_agent
+        # Smol_agent = self.Smol_agent 
 
         
         
@@ -3755,6 +3881,8 @@ if __name__ == "__main__":
     selected_input_resize_factor  = StringVar()
     selected_VRAM_limiter   = StringVar()
     selected_cpu_number     = StringVar()
+    video_format_var = StringVar()
+    audio_format_var = StringVar()
 
  
     global selected_file_list
