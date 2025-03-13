@@ -16,7 +16,6 @@ from typing    import Callable
 from threading import Thread
 from itertools import repeat
 from concurrent.futures import ThreadPoolExecutor
-from multiprocessing.pool import ThreadPool
 import yt_dlp
 import time
 from PIL import Image, ImageDraw, ImageFont  # Add these imports at the top
@@ -159,7 +158,7 @@ model_loading_thread = None
 global original_preview
 global upscaled_preview
 model_loading_lock = threading.Lock()
-
+cookie_file = find_by_relative_path("youtube.com_cookies.txt")
 AI_models_list         = ( SRVGGNetCompact_models_list + AI_LIST_SEPARATOR + RRDB_models_list + AI_LIST_SEPARATOR + IRCNN_models_list )
 gpus_list              = ["Auto", "GPU 1", "GPU 2", "GPU 3", "GPU 4" ]
 keep_frames_list       = [ "Disabled", "Enabled" ]
@@ -259,6 +258,98 @@ supported_video_extensions = [
 ]
 
 
+
+
+
+
+
+
+
+
+
+
+####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
+###Generate AI video.
+###Generate AI Img.
+class SmolAgent:
+    def __init__(self, parent_container):
+        print("Initalizing SmolAgent ")
+        self.parent_container = parent_container
+        self.uploaded_files = []  
+
+        self.container = CTkFrame(
+                    master=self.parent_container,
+                    fg_color="#000000",  
+                    border_width=2,
+                    border_color="#404040",  
+                    corner_radius=10
+                )
+        self.container.place(relx=0.34, rely=0.85, relwidth=0.3, relheight=0.5, anchor="center")
+        self.create_file_selection_menu()  
+        self.create_metadata_button()      
+
+    def create_file_selection_menu(self):
+     
+            self.file_menu_var = StringVar(value="No files uploaded")
+            self.file_menu = CTkOptionMenu(
+                master=self.container,
+                variable=self.file_menu_var,
+                values=[],
+                width=200,
+                height=30,
+                font=bold11,
+                dropdown_font=bold11,
+                fg_color=widget_background_color,
+                button_color=widget_background_color
+            )
+            self.file_menu.place(relx=column2_x - 0.44, rely=row4_y - 0.75, anchor="center")
+
+
+    def update_file_list(self, new_files):
+        self.uploaded_files.extend(new_files)
+        file_names = [os_path_basename(f) for f in self.uploaded_files]
+        self.file_menu.configure(values=file_names)
+        if file_names:
+            self.file_menu_var.set(file_names[0])
+
+    def clear_file_list(self):
+        """Reset dropdown to empty state"""
+        self.uploaded_files = []
+        self.file_menu.configure(values=[])
+        self.file_menu_var.set("No files uploaded")
+        
+    def create_metadata_button(self):
+        """Create metadata generation button"""
+        self.metadata_btn = CTkButton(
+            master=self.container,
+            text="Generate Metadata",
+            width=140,
+            height=30,
+            font=bold11,
+            border_width=1,
+            fg_color="#282828",
+            text_color="#E0E0E0",
+            border_color="#0096FF"
+        )
+        self.metadata_btn.place(relx=column2_x - 0.14, rely=row4_y - 0.75, anchor="center")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ####Youtube Download#####
 global youtube_progress_var
 def place_youtube_download_menu(parent_container):
@@ -274,7 +365,7 @@ def place_youtube_download_menu(parent_container):
         corner_radius=10,
         bg_color='transparent'
     )
-    youtube_frame.place(relx=0.3395, rely=0.535, anchor="center")
+    youtube_frame.place(relx=0.3395, rely=0.535, anchor="center")   
 
 
     bg_label = CTkLabel(
@@ -375,7 +466,7 @@ def place_youtube_download_menu(parent_container):
     video_format_dropdown = CTkComboBox(
         master=youtube_frame,
         variable=video_format_var,
-        values=["Enter Link First..."],
+        values=["None"],
         width=200
     )
     video_format_dropdown.place(relx=0.20, rely=0.35, anchor="w")
@@ -431,11 +522,11 @@ def place_youtube_download_menu(parent_container):
         if url:
             video_formats, audio_formats = get_available_formats(url)
 
-            # Set values in dropdowns
+          
             video_format_dropdown.configure(values=video_formats if video_formats else ["No video formats available"])
             audio_format_dropdown.configure(values=audio_formats if audio_formats else ["No audio formats available"])
 
-            # Select the first available format automatically
+           
             if video_formats:
                 video_format_var.set(video_formats[0])
             if audio_formats:
@@ -468,10 +559,14 @@ def place_youtube_download_menu(parent_container):
 
 
 ####YOUTUBE DOWNLOADING####
-
 def get_available_formats(youtube_url):
     try: 
-        ydl_opts = {'quiet': True}
+        ydl_opts = {
+            'quiet': True,
+            "cookiefile": cookie_file,  
+             "nocheckcertificate": True,
+            }
+        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=False)
             formats = info.get('formats', [])
@@ -480,9 +575,9 @@ def get_available_formats(youtube_url):
             audio_formats = []
 
             for f in formats:
-                if f.get('vcodec') != 'none' and f.get('acodec') == 'none':  # Video-only
+                if f.get('vcodec') != 'none' and f.get('acodec') == 'none':  
                     video_formats.append(f"{f['format_id']} - {f.get('resolution', 'Unknown')} ({f['ext']})")
-                elif f.get('acodec') != 'none' and f.get('vcodec') == 'none':  # Audio-only
+                elif f.get('acodec') != 'none' and f.get('vcodec') == 'none': 
                     audio_formats.append(f"{f['format_id']} - {f.get('abr', 'Unknown')}kbps ({f['ext']})")
 
             return video_formats, audio_formats
@@ -491,21 +586,26 @@ def get_available_formats(youtube_url):
         return [], []
 
 
-
-
-
-
 def download_youtube_link(youtube_url,output_path, progress_callback=None):
     video_format = video_format_var.get().split(" - ")[0]  
     audio_format = audio_format_var.get().split(" - ")[0]  
 
-    ydl_opts ={
+    if video_format == "None":
+        video_format = "bestaudio"
+
+        merge_format = "mp3"
+    else:
+        merge_format = "mp4"
+    ydl_opts = {
         "outtmpl": f'{output_path}/%(title)s.%(ext)s',
-        'format': f"{video_format}{audio_format}/bestaudio",
-        'merge_output_format': 'mp4',
+        "cookiefile": cookie_file,
+        'format': f"{video_format}+{audio_format}/bestaudio",
+        'merge_output_format': merge_format,
         'progress_hooks': [progress_callback] if progress_callback else [],
-        'noprogress': True,
+        'nocheckcertificate': True,
+        'cookiesfrombrowser': None,  
     }
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
              ydl.download([youtube_url])
@@ -551,6 +651,22 @@ def start_youtube_download():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### a class with list of available tools that changes window for each tool. ex, youtube download, smolagent, 
 class ToolWindowClass:
     def __init__(self, master):
@@ -565,7 +681,7 @@ class ToolWindowClass:
         self.menu_frame.pack(side="top", fill="x", pady=(0, 10))
 
   
-        self.tool_list = ['SmolAgent', 'YouTube Downloader']
+        self.tool_list = ['SmolAgent', 'YouTube Downloader', 'Mediainfo_analyst']
         self.tool_menu_var = StringVar(value=self.tool_list[0])
         self.tool_menu = CTkOptionMenu(
             master=self.menu_frame,
@@ -595,83 +711,29 @@ class ToolWindowClass:
             self.create_smol_agent()
         elif selected_tool == 'YouTube Downloader':
             self.create_youtube_downloader()
+        elif selected_tool == "Mediainfo_analyst":
+            self.create_mediainfo_Analysist()
 
     def create_smol_agent(self):
-
         self.smol_agent = SmolAgent(self.content_frame)
         self.smol_agent.container.pack(fill="both", expand=True, padx=10, pady=10)
+
 
     def create_youtube_downloader(self):
         place_youtube_download_menu(self.content_frame)
 
 
 
+    def create_mediainfo_Analysist(self):
+        return
 
-####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
-###Generate AI video.
-###Generate AI Img.
-class SmolAgent:
-    def __init__(self, parent_container):
-        print("Initalizing SmolAgent ")
-        self.parent_container = parent_container
-        self.uploaded_files = []  
-
-        self.container = CTkFrame(
-                    master=self.parent_container,
-                    fg_color="#000000",  
-                    border_width=2,
-                    border_color="#404040",  
-                    corner_radius=10
-                )
-        self.container.place(relx=0.34, rely=0.85, relwidth=0.3, relheight=0.5, anchor="center")
-        self.create_file_selection_menu()  
-        self.create_metadata_button()      
-
-    def create_file_selection_menu(self):
-     
-            self.file_menu_var = StringVar(value="No files uploaded")
-            self.file_menu = CTkOptionMenu(
-                master=self.container,
-                variable=self.file_menu_var,
-                values=[],
-                width=200,
-                height=30,
-                font=bold11,
-                dropdown_font=bold11,
-                fg_color=widget_background_color,
-                button_color=widget_background_color
-            )
-            self.file_menu.place(relx=column2_x - 0.44, rely=row4_y - 0.75, anchor="center")
+    
 
 
-    def update_file_list(self, new_files):
 
-        self.uploaded_files.extend(new_files)
-        file_names = [os_path_basename(f) for f in self.uploaded_files]
-        self.file_menu.configure(values=file_names)
-        if file_names:
-            self.file_menu_var.set(file_names[0])
 
-    def clear_file_list(self):
-        """Reset dropdown to empty state"""
-        self.uploaded_files = []
-        self.file_menu.configure(values=[])
-        self.file_menu_var.set("No files uploaded")
-        
-    def create_metadata_button(self):
-        """Create metadata generation button"""
-        self.metadata_btn = CTkButton(
-            master=self.container,
-            text="Generate Metadata",
-            width=140,
-            height=30,
-            font=bold11,
-            border_width=1,
-            fg_color="#282828",
-            text_color="#E0E0E0",
-            border_color="#0096FF"
-        )
-        self.metadata_btn.place(relx=column2_x - 0.14, rely=row4_y - 0.75, anchor="center")
+
+
 
 
 

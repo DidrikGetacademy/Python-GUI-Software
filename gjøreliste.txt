@@ -15,7 +15,7 @@
 
 [ERROR LISTE] --> Oppdateres underveis og tas til slutt for mer effeketivitet
 
-1.
+1. Når man skal laste ned video etter og ha fetcha format details, så blir bare lyd lasta ned, jeg må evt sette opp checkboks for om bare lyd eller om begge deler skal lastes ned. 
 
 2.
 
