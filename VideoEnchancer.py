@@ -17,7 +17,7 @@ from threading import Thread
 from itertools import repeat
 from concurrent.futures import ThreadPoolExecutor
 import yt_dlp
-import time
+from multiprocessing.pool import ThreadPool
 from PIL import Image, ImageDraw, ImageFont  # Add these imports at the top
 from multiprocessing import ( 
     Process, 
@@ -157,6 +157,8 @@ current_loaded_model = None
 model_loading_thread = None
 global original_preview
 global upscaled_preview
+preview_instance = None  
+global Smol_agent
 model_loading_lock = threading.Lock()
 cookie_file = find_by_relative_path("youtube.com_cookies.txt")
 AI_models_list         = ( SRVGGNetCompact_models_list + AI_LIST_SEPARATOR + RRDB_models_list + AI_LIST_SEPARATOR + IRCNN_models_list )
@@ -353,29 +355,30 @@ class SmolAgent:
 ####Youtube Download#####
 global youtube_progress_var
 def place_youtube_download_menu(parent_container):
+    frame_width = 800
+    frame_height = 600
     global youtube_link_entry, youtube_output_path_entry ,video_format_var, audio_format_var
-    bg_image = Image.open("./Assets/youtubebackground(1).png").resize((575, 300))  
-    bg_image_tk = CTkImage(bg_image, size=(575, 300))  
+    bg_image = Image.open("./Assets/youtubebackground(1).png").resize((frame_width, frame_height))
+    bg_image_tk = CTkImage(bg_image, size=(frame_width, frame_height))
 
     youtube_frame = CTkFrame(
         master=parent_container,
-        fg_color=dark_color,
-        width=575,
-        height=300,
+        fg_color="transparent",
         corner_radius=10,
         bg_color='transparent'
     )
-    youtube_frame.place(relx=0.3395, rely=0.535, anchor="center")   
+    youtube_frame.place(relx=0.5, rely=0.5, relwidth=1, relheight=1, anchor="center")
+
 
 
     bg_label = CTkLabel(
         master=youtube_frame,
         image=bg_image_tk,
-        width=500,
-        height=300,
-         bg_color='transparent'
+        width=frame_width,
+        height=frame_height,
+        bg_color='transparent'
     )
-    bg_label.place(relx=0, rely=0)  
+    bg_label.place(relx=0.7, rely=0.5, anchor="center")
     bg_label.image = bg_image_tk
 
 
@@ -396,25 +399,16 @@ def place_youtube_download_menu(parent_container):
         font=bold12,
         text_color="#C0C0C0",
         bg_color='transparent',
-        fg_color="black",
+        fg_color="transparent",
         justify="center"
-    ).place(relx=0.064, rely=0.22, anchor="w")
+    ).place(relx=0.064, rely=0.25, anchor="w")
 
 
 
 
 
  
-    CTkLabel(
-        master=youtube_frame,
-        text="Save to:",
-        font=bold12,
-        text_color="#C0C0C0",
-        bg_color="black",
-        width=120,
-        height=23,
-        justify="center"
-    ).place(relx=0.06, rely=0.123, anchor="w")
+
 
     youtube_output_path_entry = CTkEntry(
         master=youtube_frame,
@@ -423,9 +417,10 @@ def place_youtube_download_menu(parent_container):
         corner_radius=5,
         font=bold11,
         fg_color="black",
-        bg_color="black"
+        bg_color="black",
+        justify="center"
     )
-    youtube_output_path_entry.place(relx=0.376, rely=0.125, anchor="w")
+    youtube_output_path_entry.place(relx=0.125, rely=0.15, anchor="w")
     youtube_output_path_entry.insert(0,DOCUMENT_PATH)
 
     CTkButton(
@@ -437,20 +432,21 @@ def place_youtube_download_menu(parent_container):
         border_color="white",
         font=bold11,
         command=lambda: select_youtube_output_path()
-    ).place(relx=0.722, rely=0.125, anchor="w")
+    ).place(relx=0.064  , rely=0.15, anchor="w")
 
 
     CTkButton(
         master=youtube_frame,
         text="Download",
-        width=80,
+        width=100,
         height=30,
         font=bold11,
         command=lambda: start_youtube_download(),
         fg_color="black",
         border_color="white",
         border_width=1
-    ).place(relx=0.86, rely=0.22, anchor="e")
+    ).place(relx=0.12, rely=0.6, anchor="e")
+ 
 
     CTkLabel(
         master=youtube_frame,
@@ -467,9 +463,9 @@ def place_youtube_download_menu(parent_container):
         master=youtube_frame,
         variable=video_format_var,
         values=["None"],
-        width=200
+        width=300
     )
-    video_format_dropdown.place(relx=0.20, rely=0.35, anchor="w")
+    video_format_dropdown.place(relx=0.125, rely=0.35, anchor="w")
 
 
 
@@ -492,7 +488,8 @@ def place_youtube_download_menu(parent_container):
         fg_color="black",
         justify="center"
     )
-    youtube_link_entry.place(relx=0.20, rely=0.22, anchor="w") 
+    youtube_link_entry.place(relx=0.125, rely=0.25, anchor="w")
+
     youtube_link_entry.bind("<KeyRelease>", update_fetch_button_state)
 
 
@@ -513,9 +510,9 @@ def place_youtube_download_menu(parent_container):
         master=youtube_frame,
         variable=audio_format_var,
         values=["Enter Link First..."],
-        width=200
+        width=300
     )
-    audio_format_dropdown.place(relx=0.20, rely=0.42, anchor="w")
+    audio_format_dropdown.place(relx=0.125, rely=0.42, anchor="w")
 
     def update_format_list():
         url = youtube_link_entry.get()
@@ -546,7 +543,7 @@ def place_youtube_download_menu(parent_container):
         border_width=1,
         state="disabled"  
     )
-    fetch_button.place(relx=0.86, rely=0.28, anchor="e")
+    fetch_button.place(relx=0.12, rely=0.5, anchor="e")
 
     def select_youtube_output_path():
             path= filedialog.askdirectory()
@@ -571,7 +568,7 @@ def get_available_formats(youtube_url):
             info = ydl.extract_info(youtube_url, download=False)
             formats = info.get('formats', [])
 
-            video_formats = []
+            video_formats = ['Video Formats...','None']
             audio_formats = []
 
             for f in formats:
@@ -681,7 +678,7 @@ class ToolWindowClass:
         self.menu_frame.pack(side="top", fill="x", pady=(0, 10))
 
   
-        self.tool_list = ['SmolAgent', 'YouTube Downloader', 'Mediainfo_analyst']
+        self.tool_list = ['YouTube Downloader', 'SmolAgent', 'Mediainfo_analyst']
         self.tool_menu_var = StringVar(value=self.tool_list[0])
         self.tool_menu = CTkOptionMenu(
             master=self.menu_frame,
@@ -970,7 +967,7 @@ def load_model_if_needed(model_name):
 
 
 def check_model_loading_progress():
-    global model_loading_thread
+    global model_loading_thread, current_loaded_model,window
     if model_loading_thread.is_alive():
         window.after(100, check_model_loading_progress)
     else:
@@ -1868,8 +1865,14 @@ class FileWidget(CTkScrollableFrame):
 
     def _destroy_(self) -> None:
         self.file_list = []
-        self.destroy()
-        place_loadFile_section(window)
+
+        if hasattr(self, 'file_widget') and self.file_widget:
+            self.file_widget.destroy()
+            
+        if hasattr(self, 'preview_frame') and self.preview_frame:
+            self.preview_frame.destroy()
+        place_loadFile_section(window)  
+
 
     def _create_widgets(self) -> None:
         self.add_clean_button()
@@ -1915,6 +1918,9 @@ class FileWidget(CTkScrollableFrame):
     def preview_file(self, file_path):
         global preview_instance, container, original_preview, upscaled_preview
 
+        if preview_instance:
+            preview_instance.close()
+            preview_instance = None
 
         # Create new preview in the existing container and labels
         preview_instance = VideoPreview(container, original_preview, upscaled_preview, file_path)
@@ -2165,8 +2171,8 @@ def create_text_box_output_path(textvariable: StringVar) -> CTkEntry:
         textvariable  = textvariable,
         border_width  = 1,
         corner_radius = 5,
-        width         = 300,
-        height        = 30,
+        width         = 225,
+        height        = 25,
         font          = bold11,
         justify       = "center",
         text_color    = "#C0C0C0",
@@ -3271,7 +3277,6 @@ def open_files_action():
     if supported_files_counter > 0:
         if supported_files_list:
                 selected_file_list = supported_files_list
-                Smol_agent.update_file_list(supported_files_list)
                 update_file_widget(1, 2, 3)  
         upscale_factor = get_values_for_file_widget()
 
@@ -3635,7 +3640,7 @@ def open_info_cpu():
 
 
 def place_output_path_textbox():
-    output_path_button  = create_info_button(open_info_output_path, "Output path", width = 300)
+    output_path_button  = create_info_button(open_info_output_path, "Output path", width = 15)
     output_path_textbox = create_text_box_output_path(selected_output_path) 
     select_output_path_button = create_active_button(
         command = open_output_path_action,
@@ -3648,9 +3653,9 @@ def place_output_path_textbox():
 
 
   
-    output_path_button.place(relx = column1_5_x - 0.37, rely = row0_y + 0.47, anchor = "center")
-    output_path_textbox.place(relx = column1_5_x - 0.53, rely  = row0_y + 0.47, anchor = "center")
-    select_output_path_button.place(relx = column2_x - 0.41, rely  = row0_y + 0.47, anchor = "center")
+    output_path_button.place(relx = column1_5_x - 0.56, rely = row0_y - 0.11, anchor = "center")
+    output_path_textbox.place(relx = column1_5_x - 0.56, rely  = row0_y - 0.08, anchor = "center")
+    select_output_path_button.place(relx = column2_x - 0.612, rely  = row0_y - 0.08, anchor = "center")
 
 def place_AI_menu():
     AI_menu_button = create_info_button(open_info_AI_model, "AI model")
@@ -3761,7 +3766,7 @@ def place_stop_button():
         height  = 30,
         border_color = "#EC1D1D"
     )
-    stop_button.place(relx = column2_x- 0.475 , rely = row4_y , anchor = "center")
+    stop_button.place(relx = column2_x- 0.7 , rely = row4_y + 0.04, anchor = "center")
 
 def place_upscale_button(): 
     upscale_button = create_active_button(
@@ -3771,8 +3776,8 @@ def place_upscale_button():
         width   = 140,
         height  = 30
     )
-    upscale_button.place(relx = column2_x - 0.23, rely = row4_y - 0.575, anchor = "center")
-   
+    upscale_button.place(relx = column2_x - 0.625, rely = row4_y + 0.04, anchor = "center")
+    upscale_button.lift()
 def create_option_background():
     return CTkFrame(
         master   = window,
@@ -3843,6 +3848,11 @@ def on_app_close() -> None:
     global input_resize_factor
     global cpu_number
     global selected_audio_mode 
+    global preview_ai_instance
+
+
+    preview_ai_instance = None
+
     selected_audio_mode = "Disabled"
     AI_model_to_save          = f"{selected_AI_model}"
     AI_multithreading_to_save = f"{selected_AI_multithreading} threads"
@@ -3903,9 +3913,7 @@ class App():
         self.background_label.lower() 
         self.ToolWindowClass = ToolWindowClass(Master)
         self.ToolWindowClass.create_widgets()
-      #  self.Smol_agent = SmolAgent(Master)
         load_model_inference()
-      #  place_youtube_download_menu()
         place_loadFile_section(Master)
         place_output_path_textbox()
         place_AI_menu()
@@ -3920,8 +3928,7 @@ class App():
         place_video_extension_menu()
         place_message_label()
         place_upscale_button()
-       # global Smol_agent
-        # Smol_agent = self.Smol_agent 
+ 
 
         
         
@@ -4009,6 +4016,6 @@ if __name__ == "__main__":
     
     
     
-    app = App(window)#Creates an instance of the App class. Passes the window object (the main GUI window) to the App class so it can set it up.
-    window.update()#Refreshes the window to ensure that all updates (like layouts and text) are visible.
-    window.mainloop()#Starts the GUI's event loop, which keeps the window open and responsive. This is where the program "waits" for the user to interact with the window (like clicking a button).
+    app = App(window)
+    window.update()
+    window.mainloop()
