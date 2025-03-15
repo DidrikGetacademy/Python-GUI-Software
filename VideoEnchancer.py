@@ -18,7 +18,7 @@ from itertools import repeat
 from concurrent.futures import ThreadPoolExecutor
 import yt_dlp
 from multiprocessing.pool import ThreadPool
-from PIL import Image, ImageDraw, ImageFont  # Add these imports at the top
+from PIL import Image, ImageDraw, ImageFont 
 from multiprocessing import ( 
     Process, 
     Queue          as multiprocessing_Queue,
@@ -31,8 +31,9 @@ from json import (
 )
 
 import gc
+import shutil
 
-
+from File_path import get_app_data_path
 from os import (
     sep        as os_separator,
     devnull    as os_devnull,
@@ -149,6 +150,20 @@ IRCNN_models_list           = [ "IRCNN_Mx1", "IRCNN_Lx1" ]
 SRVGGNetCompact_models_list = [ "RealESR_Gx4", "RealSRx4_Anime" ]
 RRDB_models_list            = [ "BSRGANx4", "BSRGANx2", "RealESRGANx4" ]
 
+
+
+####Cookies
+import datetime
+FUTURE_DATE = datetime.datetime(2030, 1, 1)
+NEW_TIMESTAMP = int(FUTURE_DATE.timestamp())
+fixed_cookie_filename = "youtube.com_cookies.txt"
+COOKIE_STORAGE_DIR = get_app_data_path() / "cookies" 
+COOKIE_PATH_FILE = COOKIE_STORAGE_DIR / fixed_cookie_filename
+if not COOKIE_STORAGE_DIR.exists():
+    COOKIE_STORAGE_DIR.mkdir(parents=True)
+cookie_file_path = None
+
+
 #Video Preview
 frame_cache = {}
 last_model_config =  None
@@ -159,8 +174,11 @@ global original_preview
 global upscaled_preview
 preview_instance = None  
 global Smol_agent
+
+
+
+
 model_loading_lock = threading.Lock()
-cookie_file = find_by_relative_path("youtube.com_cookies.txt")
 AI_models_list         = ( SRVGGNetCompact_models_list + AI_LIST_SEPARATOR + RRDB_models_list + AI_LIST_SEPARATOR + IRCNN_models_list )
 gpus_list              = ["Auto", "GPU 1", "GPU 2", "GPU 3", "GPU 4" ]
 keep_frames_list       = [ "Disabled", "Enabled" ]
@@ -355,6 +373,7 @@ class SmolAgent:
 ####Youtube Download#####
 global youtube_progress_var
 def place_youtube_download_menu(parent_container):
+    load_cookie_file_path()
     frame_width = 800
     frame_height = 600
     global youtube_link_entry, youtube_output_path_entry ,video_format_var, audio_format_var
@@ -387,9 +406,10 @@ def place_youtube_download_menu(parent_container):
         master=youtube_frame,
         textvariable=youtube_progress_var,
         font=bold12,
-        text_color="#00FF00"
+        text_color="#00FF00",
+        width=100
     )
-    progress_label.place(relx=0.95, rely=0.3, anchor="center")
+    progress_label.place(relx=0.25, rely=0.4, anchor="center")
 
 
     #input for the youtubelink
@@ -405,11 +425,6 @@ def place_youtube_download_menu(parent_container):
 
 
 
-
-
- 
-
-
     youtube_output_path_entry = CTkEntry(
         master=youtube_frame,
         width=300,
@@ -422,6 +437,8 @@ def place_youtube_download_menu(parent_container):
     )
     youtube_output_path_entry.place(relx=0.125, rely=0.15, anchor="w")
     youtube_output_path_entry.insert(0,DOCUMENT_PATH)
+
+
 
     CTkButton(
         master=youtube_frame,
@@ -446,7 +463,23 @@ def place_youtube_download_menu(parent_container):
         border_color="white",
         border_width=1
     ).place(relx=0.12, rely=0.6, anchor="e")
- 
+
+    global upload_button
+    upload_button = CTkButton(
+        master=youtube_frame,
+        text="Upload Cookies",
+        width=100,
+        height=30,
+        font=bold11,
+        command=lambda: upload_cookie_file(),
+        fg_color="black",
+        border_color="white",
+        border_width=1
+    )
+    upload_button.place(relx=0.12, rely=0.7, anchor="e")
+    
+    if cookie_file_path is not None:
+        upload_button.place_forget()
 
     CTkLabel(
         master=youtube_frame,
@@ -456,7 +489,6 @@ def place_youtube_download_menu(parent_container):
         bg_color="transparent",
     ).place(relx=0.064, rely=0.35, anchor="w")
 
-    video_format_var = StringVar()
 
 
     video_format_dropdown = CTkComboBox(
@@ -555,15 +587,100 @@ def place_youtube_download_menu(parent_container):
 
 
 
-####YOUTUBE DOWNLOADING####
+def load_cookie_file_path():
+    """ Load cookie file path from saved path file. """
+    global cookie_file_path
+    try:
+        if COOKIE_PATH_FILE.exists():
+            cookie_file_path = str(COOKIE_PATH_FILE)
+        else:
+            cookie_file_path = None
+    except Exception as e:        
+        cookie_file_path = None
+
+
+def update_cookie_timestamps(file_path):
+    """ Reads cookie file, updates expiration timestamps, and saves it back. """
+    
+    updated_lines = []
+    
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split("\t")
+
+      
+            if line.startswith("#") or len(parts) < 5:
+                updated_lines.append(line.strip())
+                continue
+            
+            try:
+      
+                old_timestamp = int(parts[4])
+                if old_timestamp < NEW_TIMESTAMP:
+                    parts[4] = str(NEW_TIMESTAMP)  
+            except ValueError:
+                pass  
+
+            updated_lines.append("\t".join(parts))
+    
+    updated_path = os.path.join(COOKIE_STORAGE_DIR, os.path.basename(file_path))
+    with open(updated_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(updated_lines))
+
+    print(f"Updated cookie file saved at: {updated_path}")
+    return updated_path
+
+
+def upload_cookie_file():
+    """ Let user upload a cookie file and save it to the app's cookie directory. """
+    global cookie_file_path,upload_button
+
+    cookie_file_path_input = filedialog.askopenfilename(
+        title="Select Cookie File", 
+        filetypes=[("Text files", "*.txt")]
+    )
+    
+    if cookie_file_path_input:
+        try:
+           #cookie_filename = os.path.basename(cookie_file_path_input)
+
+           save_path = COOKIE_STORAGE_DIR / fixed_cookie_filename
+
+           shutil.copy(cookie_file_path_input, save_path)
+
+           cookie_file_path = str(save_path)
+
+
+           update_cookie_timestamps(cookie_file_path)
+           upload_button.place_forget()
+           
+
+        except Exception as e:
+            print(f"Error saving cookie file: {e}")
+    else: 
+        print("No file selected")
+
+
+
+def ensure_protocol(youtube_url):
+
+    if not youtube_url.startswith(('http://', 'https://')):
+        youtube_url = 'https://' + youtube_url
+    return youtube_url
+
+
+
 def get_available_formats(youtube_url):
-    try: 
-        ydl_opts = {
+    global cookie_file_path
+    ensure_protocol(youtube_url)
+    ydl_opts = {
             'quiet': True,
-            "cookiefile": cookie_file,  
              "nocheckcertificate": True,
             }
-        
+    if cookie_file_path:
+        ydl_opts["cookiefile"] = cookie_file_path
+
+    try: 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=False)
             formats = info.get('formats', [])
@@ -578,6 +695,7 @@ def get_available_formats(youtube_url):
                     audio_formats.append(f"{f['format_id']} - {f.get('abr', 'Unknown')}kbps ({f['ext']})")
 
             return video_formats, audio_formats
+        
     except Exception as e:
         print(f"Error fetching formats: {e}")
         return [], []
@@ -595,7 +713,7 @@ def download_youtube_link(youtube_url,output_path, progress_callback=None):
         merge_format = "mp4"
     ydl_opts = {
         "outtmpl": f'{output_path}/%(title)s.%(ext)s',
-        "cookiefile": cookie_file,
+        "cookiefile": cookie_file_path,
         'format': f"{video_format}+{audio_format}/bestaudio",
         'merge_output_format': merge_format,
         'progress_hooks': [progress_callback] if progress_callback else [],
@@ -3928,6 +4046,8 @@ class App():
         place_video_extension_menu()
         place_message_label()
         place_upscale_button()
+      
+
  
 
         
