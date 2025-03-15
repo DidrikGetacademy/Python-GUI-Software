@@ -3,6 +3,7 @@ from functools  import cache
 from time       import sleep
 from webbrowser import open as open_browser
 from subprocess import run  as subprocess_run
+import ffmpeg
 from shutil     import rmtree as remove_directory
 from timeit     import default_timer as timer
 from PIL import Image, ImageTk, ImageSequence
@@ -32,7 +33,7 @@ from json import (
 
 import gc
 import shutil
-
+import json
 from File_path import get_app_data_path
 from os import (
     sep        as os_separator,
@@ -104,7 +105,7 @@ from numpy import (
 )
 
 # GUI imports
-from tkinter import StringVar, DISABLED, NORMAL
+from tkinter import StringVar, DISABLED, NORMAL,END
 from customtkinter import (
     CTk,
     CTkButton,
@@ -119,6 +120,7 @@ from customtkinter import (
     CTkScrollableFrame,
     CTkToplevel,
     filedialog,
+    CTkTextbox,
     set_appearance_mode,
     set_default_color_theme
 )
@@ -288,9 +290,10 @@ supported_video_extensions = [
 
 
 
+
+
+####TOOL FOR TOOLCLASS#####
 ####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
-###Generate AI video.
-###Generate AI Img.
 class SmolAgent:
     def __init__(self, parent_container):
         print("Initalizing SmolAgent ")
@@ -370,10 +373,13 @@ class SmolAgent:
 
 
 
+
+
+####TOOL FOR TOOLCLASS#####
 ####Youtube Download#####
 global youtube_progress_var
 def place_youtube_download_menu(parent_container):
-    load_cookie_file_path()
+    #load_cookie_file_path()
     frame_width = 800
     frame_height = 600
     global youtube_link_entry, youtube_output_path_entry ,video_format_var, audio_format_var
@@ -584,7 +590,19 @@ def place_youtube_download_menu(parent_container):
                 youtube_output_path_entry.insert(0,path)
 
 
+def delete_cookie_file_and_reset_button():
+    """ Deletes the cookie file if it exists and resets the upload button visibility. """
+    global upload_button, COOKIE_PATH_FILE, cookie_file_path
 
+    if COOKIE_PATH_FILE.exists():
+        try:
+
+            os.remove(COOKIE_PATH_FILE)
+            cookie_file_path = None
+            print(f"Cookie file {COOKIE_PATH_FILE} deleted successfully.")
+        except Exception as e:
+            print(f"Error deleting cookie file: {e}")
+    upload_button.place(relx=0.12, rely=0.7, anchor="e")
 
 
 def load_cookie_file_path():
@@ -601,7 +619,6 @@ def load_cookie_file_path():
 
 def update_cookie_timestamps(file_path):
     """ Reads cookie file, updates expiration timestamps, and saves it back. """
-    
     updated_lines = []
     
     with open(file_path, "r", encoding="utf-8") as f:
@@ -679,6 +696,10 @@ def get_available_formats(youtube_url):
             }
     if cookie_file_path:
         ydl_opts["cookiefile"] = cookie_file_path
+    if not cookie_file_path or (cookie_file_path and COOKIE_PATH_FILE.exists()):
+        delete_cookie_file_and_reset_button()
+
+        print(f"cookie_file_path when getting available format: {cookie_file_path}")
 
     try: 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -768,6 +789,130 @@ def start_youtube_download():
 
 
 
+def get_ffmpeg_details(file_path):
+    """
+    Uses ffmpeg.probe to extract metadata from a video file.
+    Returns a formatted JSON string with all available details.
+    """
+    try:
+        probe = ffmpeg.probe(file_path)
+        return json.dumps(probe, indent=4)
+    except ffmpeg.Error as e:
+        error_message = e.stderr.decode() if e.stderr else str(e)
+        return f"Error retrieving details: {error_message}"
+    except Exception as e:
+        return f"An unexpected error occurred: {e}"
+
+
+
+####TOOL FOR TOOLCLASS#####
+class MediaInfoAnalyst:
+    def __init__(self,parent_container):
+        self.parent_container = parent_container
+        self.selected_file_list = selected_file_list
+
+
+        self.container = CTkFrame(
+            master=self.parent_container,
+            fg_color="#000000",  
+            border_width=2,
+            border_color="#404040",  
+            corner_radius=10
+        )
+        self.container.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8, relheight=0.8)
+        self.create_widgets()
+
+        self.populate_dropdown()
+
+    def create_widgets(self):
+
+        self.menu_frame = CTkFrame(master=self.container, fg_color="transparent")
+        self.menu_frame.pack(side="top", fill="x", pady=(10, 5))
+
+
+        self.file_menu_var = StringVar(value="No files uploaded")
+        self.file_menu = CTkOptionMenu(
+            master=self.menu_frame,
+            variable=self.file_menu_var,
+            values=[],  
+            width=200,
+            height=30,
+            fg_color="#282828",
+            button_color="#404040",
+            text_color="#FFFFFF"
+        )
+        self.file_menu.pack(side="left", padx=10)
+
+    
+        self.get_details_btn = CTkButton(
+            master=self.menu_frame,
+            text="Get Details",
+            width=140,
+            height=30,
+            fg_color="#282828",
+            text_color="#E0E0E0",
+            border_color="#0096FF",
+            command=self.get_details  
+        )
+        self.get_details_btn.pack(side="right", padx=10)
+
+
+        self.details_text = CTkTextbox(
+            master=self.container,
+            width=1000,
+            height=500,
+            font=("Arial",20),
+            corner_radius=10
+        )
+        self.details_text.place(relx=0.5, rely=0.5, anchor="center")
+
+  
+    def populate_dropdown(self):
+        file_names = [f.split("/")[-1] for f in self.selected_file_list]
+        self.file_menu.configure(values=file_names)
+        if file_names:
+            self.file_menu_var.set(file_names[0])
+    
+
+    def clear_file_list(self):
+        """
+        Clears the selected_file_list and resets the dropdown.
+        """
+        self.selected_file_list = []
+        self.file_menu.configure(values=[])
+        self.file_menu_var.set("No files uploaded")
+
+    def get_details(self):
+        """
+        Retrieves detailed metadata for the selected video file using ffmpeg.
+        """
+        selected_file = self.file_menu_var.get()
+        file_path = next((f for f in self.selected_file_list if f.split("/")[-1] == selected_file), None)
+        if file_path:
+            details = get_ffmpeg_details(file_path)
+            self.details_text.delete("1.0", END)
+            if details.startswith("Error") or details.startswith("An unexpected"):
+               self.details_text.insert(END, details)
+            else: 
+                formatted_data = self.format_details(details)
+                self.details_text.insert(END,formatted_data)
+        else:
+            self.details_text.delete("1.0", END)
+            self.details_text.insert(END, "No file selected or file not found.")
+
+
+    def format_details(self, details):
+        """
+        Format and structure the JSON data for better readability in the textbox.
+        """
+        try:
+            parsed_details = json.loads(details)
+            
+            formatted_data = json.dumps(parsed_details, indent=4)
+
+            return formatted_data
+        except json.JSONDecodeError:
+            return "Error: Failed to parse the details."
 
 
 
@@ -777,11 +922,7 @@ def start_youtube_download():
 
 
 
-
-
-
-
-
+####TOOLCLASS#####
 ### a class with list of available tools that changes window for each tool. ex, youtube download, smolagent, 
 class ToolWindowClass:
     def __init__(self, master):
@@ -840,10 +981,77 @@ class ToolWindowClass:
 
 
     def create_mediainfo_Analysist(self):
-        return
+        self.mediainfo_analyst = MediaInfoAnalyst(self.content_frame)
+        self.mediainfo_analyst.container.pack(fill="both", expand=True, padx=10, pady=10)
 
     
+    def format_details(self, details):
+        """
+        Format and structure the JSON data for better readability in the textbox.
+        """
+        try:
+      
+            parsed_details = json.loads(details)
+            
+    
+            formatted_data = ""
 
+          
+            formatted_data += "\n### General Information ###\n"
+            format_info = parsed_details.get('format', {})
+            formatted_data += f"Filename: {format_info.get('filename', 'N/A')}\n"
+            formatted_data += f"Format: {format_info.get('format_name', 'N/A')} ({format_info.get('format_long_name', 'N/A')})\n"
+            formatted_data += f"Duration: {format_info.get('duration', 'N/A')} seconds\n"
+            formatted_data += f"Size: {format_info.get('size', 'N/A')} bytes\n"
+            formatted_data += f"Bitrate: {format_info.get('bit_rate', 'N/A')} bps\n"
+            formatted_data += f"Probe Score: {format_info.get('probe_score', 'N/A')}\n"
+            formatted_data += "-" * 50 + "\n"
+
+       
+            streams = parsed_details.get('streams', [])
+            for stream in streams:
+                formatted_data += f"### Stream {stream.get('index', 'N/A')} ###\n"
+                formatted_data += f"Codec: {stream.get('codec_long_name', 'N/A')}\n"
+                formatted_data += f"Codec Type: {stream.get('codec_type', 'N/A')}\n"
+                formatted_data += f"Resolution: {stream.get('width', 'N/A')} x {stream.get('height', 'N/A')}\n"
+                formatted_data += f"Aspect Ratio: {stream.get('display_aspect_ratio', 'N/A')}\n"
+                formatted_data += f"Frame Rate: {stream.get('r_frame_rate', 'N/A')}\n"
+                formatted_data += f"Bitrate: {stream.get('bit_rate', 'N/A')}\n"
+                formatted_data += f"Duration: {stream.get('duration', 'N/A')} seconds\n"
+                formatted_data += f"Has B-Frames: {stream.get('has_b_frames', 'N/A')}\n"
+                formatted_data += f"Sample Aspect Ratio: {stream.get('sample_aspect_ratio', 'N/A')}\n"
+                formatted_data += f"Chroma Location: {stream.get('chroma_location', 'N/A')}\n"
+                formatted_data += f"Field Order: {stream.get('field_order', 'N/A')}\n"
+                formatted_data += f"Pixel Format: {stream.get('pix_fmt', 'N/A')}\n"
+                formatted_data += "-" * 50 + "\n"
+
+              
+                disposition = stream.get('disposition', {})
+                formatted_data += "Disposition:\n"
+                for key, value in disposition.items():
+                    formatted_data += f"  {key}: {value}\n"
+
+           
+                tags = stream.get('tags', {})
+                if tags:
+                    formatted_data += "Tags:\n"
+                    for tag_key, tag_value in tags.items():
+                        formatted_data += f"  {tag_key}: {tag_value}\n"
+                formatted_data += "-" * 50 + "\n"
+
+       
+            tags = format_info.get('tags', {})
+            if tags:
+                formatted_data += "\n### File Tags ###\n"
+                for tag_key, tag_value in tags.items():
+                    formatted_data += f"{tag_key}: {tag_value}\n"
+                formatted_data += "-" * 50 + "\n"
+
+        
+            return formatted_data
+
+        except json.JSONDecodeError:
+            return "Error: Failed to parse the details."
 
 
 
@@ -3394,6 +3602,8 @@ def open_files_action():
 
     if supported_files_counter > 0:
         if supported_files_list:
+   
+
                 selected_file_list = supported_files_list
                 update_file_widget(1, 2, 3)  
         upscale_factor = get_values_for_file_widget()
@@ -4046,7 +4256,7 @@ class App():
         place_video_extension_menu()
         place_message_label()
         place_upscale_button()
-      
+        load_cookie_file_path()
 
  
 

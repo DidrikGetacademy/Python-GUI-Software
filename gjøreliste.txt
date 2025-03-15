@@ -54,3 +54,7 @@ Nettside: https://learnreflects.com/
 
 3. Egen nettside med fokus på distrubering av AI-Agenter for bedrifter. salg av forskjellige agenter med forskjellige evner innenfor forskjellige bedrifts kategorier. 
 nettside: http://aiadoptionagents.com/
+
+
+
+ffmpeg -i mystery.mp4 -c:v prores_ks -profile 3 -c:a pcm_s16le mystery.mov
