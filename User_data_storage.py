@@ -15,13 +15,13 @@ def set_user_data(data,password = None,RememberMe = False):
     _user_data = data
     if password and RememberMe == True:
         _user_data["password"] = password
-        _user_data["last_login"] = time.time() #saves the current time.
+        _user_data["last_login"] = time.time() 
     from File_path import ensure_userdata
     ensure_userdata()
     logging.info("User data has been set, and dumped in file.")
 
 
-#C:\Users\YourUsername\AppData\Roaming\LearnReflect\Userdata.txt
+
 
 def get_user_data():
     return _user_data

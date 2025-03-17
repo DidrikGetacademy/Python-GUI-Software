@@ -3,20 +3,16 @@ from RegisterAccount_GUI import RegistrationFrame
 from LoginAccount_GUI import LoginFrame
 from PIL import Image, ImageTk 
 from File_path import resource_path
-
 class MainApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.geometry("1400x800")
+        self.geometry("1920x1080")
         self.title("Account Management")
         self.resizable(False,False)
         self.maxsize(1400,800)
         self.minsize(1400,800)
         
         
-        ImageFront = resource_path("Assets/background1.png")
-        self.background_image = Image.open(ImageFront)  
-        self.background_photo = ImageTk.PhotoImage(self.background_image)
 
 
         self.canvas = ctk.CTkCanvas(
@@ -25,8 +21,12 @@ class MainApp(ctk.CTk):
             height=200, 
             highlightthickness=0
             )
+        
         self.canvas.pack(fill="both", expand=True)
-        self.setup_background()
+        ImageFront = resource_path("Assets/background1.png")
+        self.background_image = Image.open(ImageFront)  
+        self.background_photo = ImageTk.PhotoImage(self.background_image)
+        self.canvas.create_image(0, 0, image=self.background_photo, anchor="nw")
 
 
        
@@ -59,15 +59,13 @@ class MainApp(ctk.CTk):
             self.open_login_Account
             )
         
+        
         self.login_frame = LoginFrame(
             self, 
             self.Connect_User_Account
             )
         self.UserAccount_Frame = None
 
-
-    def setup_background(self):
-       self.canvas.create_image(0, 0, image=self.background_photo, anchor="nw")
 
 
     def Connect_User_Account(self):
@@ -102,7 +100,7 @@ class MainApp(ctk.CTk):
 
     def show_mainwindow(self):
         self.canvas.pack(fil="both",expand=True)
-        self.setup_background()
+        self.canvas.create_image(0, 0, image=self.background_photo, anchor="nw")
         self.Register_button.place(relx=0.5, rely=0.5, anchor="center")
         self.login_button.place(relx=0.5, rely=0.6, anchor="center")
 

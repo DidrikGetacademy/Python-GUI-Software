@@ -10,7 +10,7 @@ class LoginFrame(ctk.CTkFrame):
     def __init__(self, master, Connect_UserAccount):
         super().__init__(master, fg_color="transparent") 
 
-        # Load and set the background image
+     
         image_path = resource_path("Assets/background1.png")
         self.background_image = Image.open(image_path)
         self.background_photo = ImageTk.PhotoImage(self.background_image)
@@ -31,7 +31,6 @@ class LoginFrame(ctk.CTkFrame):
             )  
         self.container.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Title Label
         self.title_label = ctk.CTkLabel(
             self.container, 
             text="Login Account", 
@@ -40,7 +39,7 @@ class LoginFrame(ctk.CTkFrame):
             )  
         self.title_label.pack(pady=20)
 
-        # Email Field
+        
         self.email_label = ctk.CTkLabel(self.container, text="Email", text_color="#FFFFFF")  # White text
         self.email_label.pack(pady=(10, 0))
         self.email_entry = ctk.CTkEntry(
@@ -53,7 +52,7 @@ class LoginFrame(ctk.CTkFrame):
             )
         self.email_entry.pack(pady=5)
 
-        # Password Field
+     
         self.password_label = ctk.CTkLabel(self.container, text="Password", text_color="#FFFFFF")  # White text
         self.password_label.pack(pady=(10, 0))
         self.password_entry = ctk.CTkEntry(
@@ -67,7 +66,7 @@ class LoginFrame(ctk.CTkFrame):
             )
         self.password_entry.pack(pady=5)
 
-        # Remember Me Checkbox
+   
         self.remember_me_var = ctk.BooleanVar()
         self.remember_me_checkbox = ctk.CTkCheckBox(
             self.container,
@@ -78,7 +77,7 @@ class LoginFrame(ctk.CTkFrame):
         self.remember_me_checkbox.pack(pady=10)
 
 
-        # Login Button
+    
         self.login_button = ctk.CTkButton(
             self.container,
               text="Login",
@@ -91,7 +90,6 @@ class LoginFrame(ctk.CTkFrame):
 
 
 
-        # Forgot Password Button
         self.forgot_password = ctk.CTkButton(
             self.container, 
             text="Forgot password?", 
@@ -103,7 +101,7 @@ class LoginFrame(ctk.CTkFrame):
         self.forgot_password.pack(pady=5)
 
 
-        # Go Back Button
+     
         self.goback_button = ctk.CTkButton(
             self.container, 
             text="Go back", 
@@ -115,7 +113,7 @@ class LoginFrame(ctk.CTkFrame):
         self.goback_button.pack(pady=5)
 
 
-        # Status Label
+   
         self.status_label = ctk.CTkLabel(
             self.container, 
             text="", 
@@ -192,11 +190,6 @@ class LoginFrame(ctk.CTkFrame):
             from User_data_storage import set_user_data
             set_user_data(user_data,password=password,RememberMe=self.remember_me_var.get())
             self.switch_to_Accountsystem()
-    
-        
-            
-
-
 
 
 
@@ -204,7 +197,6 @@ class LoginFrame(ctk.CTkFrame):
         self.pack_forget()
         self.master.show_mainwindow()
         
-    
     
     
     def open_Forget_password(self):

@@ -35,10 +35,6 @@ class ActivationWindow(CTkToplevel):
                     self.destroy()
             
 
-        
-        
-        
-        
         self.create_activation_ui()
         
         self.entry.focus_set()

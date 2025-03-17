@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import threading
 import cv2
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from Logger import logging
 from typing    import Callable
 from threading import Thread
@@ -30,7 +29,6 @@ from json import (
     load  as json_load, 
     dumps as json_dumps
 )
-
 import gc
 import shutil
 import json
@@ -862,7 +860,9 @@ class MediaInfoAnalyst:
             width=1000,
             height=500,
             font=("Arial",20),
-            corner_radius=10
+            corner_radius=10,
+            state="disabled"  
+
         )
         self.details_text.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -929,7 +929,7 @@ class ToolWindowClass:
         self.master = master
   
         self.container = CTkFrame(master, fg_color="transparent")
-        self.container.place(relx=0.595, rely=0.725, relwidth=0.8, relheight=0.6, anchor="center")
+        self.container.place(relx=0.595, rely=0.725, relwidth=0.806, relheight=0.61, anchor="center")
         self.create_widgets()
 
     def create_widgets(self):
@@ -1084,7 +1084,7 @@ class VideoPreview:
             to=self.total_frames,
             command=self.update_frame_preview
         )
-        self.timeline_slider.pack(fill="x", padx=20, pady=10, after=self.upscaled_label)
+        self.timeline_slider.pack(padx=0.01, pady=0.01)
         
         self.update_frame_preview(0)
         print("VideoPreview initialized successfully.")
@@ -1125,7 +1125,7 @@ class VideoPreview:
             print(f"Processing frame {frame_number}...")
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(frame_number))
             
-            # Check if frame is already cached
+   
             if frame_number in frame_cache:
                 self.loading_icon.stop()
                 print(f"Frame {frame_number} loaded from cache.")
@@ -1380,7 +1380,7 @@ def place_loadFile_section(window):
     fg_color=dark_color,
     width=preview_width * 2 + 40, 
     height=preview_height + 40, 
-    corner_radius=10
+    corner_radius=3
     )
     window.preview_frame.place(relx=0.80, rely=0.205, anchor="center")
 
@@ -1391,7 +1391,7 @@ def place_loadFile_section(window):
 
     # Create container
     container = CTkFrame(window.preview_frame, fg_color=dark_color)
-    container.pack(pady=20, padx=20, fill='both', expand=True)
+    container.pack(pady=13, padx=21, fill='both', expand=True)
 
     # Original frame with placeholder
     original_frame = CTkFrame(container, fg_color=dark_color)
@@ -1489,14 +1489,18 @@ class AI:
         
     
 
-    def _load_inferenceSession(self) -> onnxruntime_inferenceSession:     
+    def _load_inferenceSession(self) -> onnxruntime_inferenceSession:
         import onnxruntime
         providers = ['CPUExecutionProvider']
 
-        if 'DmlExecutionProvider' in onnxruntime.get_available_providers():
+        if 'CUDAExecutionProvider' in onnxruntime.get_available_providers():
+
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        elif 'DmlExecutionProvider' in onnxruntime.get_available_providers():
+
             match self.directml_gpu:
                 case 'Auto':
-                    #lets ort choose the best model.
+                   
                     providers = [('DmlExecutionProvider', {})] + providers
                 case 'GPU 1' | 'GPU 2' | 'GPU 3' | 'GPU 4':
                     device_id = int(self.directml_gpu.split()[-1]) - 1
@@ -1506,30 +1510,35 @@ class AI:
                     ]
                 case 'CPU':
                     providers = ['CPUExecutionProvider']
-
+        
+        # Set up session options
         session_options = onnxruntime.SessionOptions()
         session_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         session_options.execution_mode = onnxruntime.ExecutionMode.ORT_PARALLEL
+        
         try:
+          
             inference_session = onnxruntime_inferenceSession(
                 path_or_bytes=self.AI_model_path,
                 providers=providers,
                 sess_options=session_options
             )
         except Exception as e:
-                print(f"Session creation failed: {str(e)}")
+            print(f"Session creation failed: {str(e)}")
 
-                #fallback to CPU if GPU fails
-                inference_session = onnxruntime_inferenceSession(
-                    path_or_bytes=self.AI_model_path,
-                    providers=['CPUExecutionProvider']
-                )
+            inference_session = onnxruntime_inferenceSession(
+                path_or_bytes=self.AI_model_path,
+                providers=['CPUExecutionProvider']
+            )
+        
         print(f"Using providers: {inference_session.get_providers()}")
-        if 'DmlExecutionProvider' in inference_session.get_providers():
-            options = inference_session.get_provider_options()['DmlExecutionProvider']
-            print(f"DirectML device ID: {options.get('device_id', 'default')}")
+        if 'CUDAExecutionProvider' in inference_session.get_providers():
+            options = inference_session.get_provider_options()['CUDAExecutionProvider']
+            print(f"CUDA device ID: {options.get('device_id', 'default')}")
 
         return inference_session
+
+
 
 
 
@@ -1543,6 +1552,8 @@ class AI:
             raise ValueError(f"Uknown model_type: {model_type}")
     
     
+    
+
     
     def Run_Audio_inference(self, model_type: str, Model_audio_input_path: str) -> str:
         self.Audio_model_path = find_by_relative_path(f"AI-onnx{os_separator}{self.getAudioModelName(model_type)}UNet.onnx")
@@ -2239,7 +2250,57 @@ class FileWidget(CTkScrollableFrame):
         )
         window.preview_button.pack(side="right", padx=(0, 10))
 
-        return file_frame  
+        delete_btn = CTkButton(
+            file_frame,
+            text="Delete",
+            width=80,
+            height=24,
+            font=bold11,
+            fg_color="#282828",
+            text_color="#E0E0E0",
+            border_color="#FF3131",
+            border_width=1,
+            command=lambda path=file_path: self.delete_single_file(path)
+        )
+        delete_btn.pack(side="right", padx=(0, 10))
+
+        return file_frame
+
+
+
+    def delete_single_file(self, file_path):
+        global selected_file_list, preview_instance, original_preview, upscaled_preview
+        if file_path in selected_file_list:
+        
+            selected_file_list.remove(file_path)
+    
+            if preview_instance and preview_instance.video_path == file_path:
+                preview_instance.close()
+                preview_instance = None
+    
+                placeholder_img = create_placeholder_image(340, 400)
+                placeholder_photo = CTkImage(placeholder_img, size=(340, 400))
+                original_preview.configure(image=placeholder_photo)
+                upscaled_preview.configure(image=placeholder_photo)
+                original_preview.image = placeholder_photo
+                upscaled_preview.image = placeholder_photo
+
+  
+            self.clean_file_list()
+            self._create_widgets()
+            update_file_widget(1, 2, 3)
+
+
+            if not selected_file_list:
+                if hasattr(self, 'file_widget'):
+                    self.file_widget.destroy()
+                if hasattr(self, 'preview_frame'):
+                    self.preview_frame.destroy()
+                place_loadFile_section(window)
+            
+
+
+
 
     def preview_file(self, file_path):
         global preview_instance, container, original_preview, upscaled_preview
@@ -2248,7 +2309,7 @@ class FileWidget(CTkScrollableFrame):
             preview_instance.close()
             preview_instance = None
 
-        # Create new preview in the existing container and labels
+        # ereate new preview in the existing container and labels
         preview_instance = VideoPreview(container, original_preview, upscaled_preview, file_path)
   
     
@@ -2259,10 +2320,10 @@ class FileWidget(CTkScrollableFrame):
             self, 
             image        = clear_icon,
             font         = bold11,
-            text         = "CLEAN", 
+            text         = "Empty LIST", 
             compound     = "left",
             width        = 100, 
-            height       = 28,
+            height       = 20,
             border_width = 1,
             fg_color     = "#282828",
             text_color   = "#E0E0E0",
@@ -3586,7 +3647,7 @@ def get_upscale_factor() -> int:
 
 
 def open_files_action():
-    global selected_file_list, Smol_agent  
+    global selected_file_list  
     def check_supported_selected_files(uploaded_file_list: list) -> list:
         return [file for file in uploaded_file_list if any(supported_extension in file for supported_extension in supported_file_extensions)]
 
@@ -4227,7 +4288,7 @@ def on_app_close() -> None:
     
     
     
-class App():
+class VideoEnhancer():
     def __init__(self, Master):
         self.toplevel_window = None
         Master.protocol("WM_DELETE_WINDOW", on_app_close)
@@ -4263,6 +4324,9 @@ class App():
         
         
 if __name__ == "__main__":
+    from Decryption import validate_jwt
+    if not validate_jwt():
+        sys.exit(1)
     
 
     multiprocessing_freeze_support()
@@ -4271,7 +4335,7 @@ if __name__ == "__main__":
     
 
     window = CTk() 
-    # Set background color to black
+
 
     youtube_progress_var = StringVar()
     processing_queue = multiprocessing_Queue(maxsize=1)
@@ -4346,6 +4410,6 @@ if __name__ == "__main__":
     
     
     
-    app = App(window)
+    app = VideoEnhancer(window)
     window.update()
     window.mainloop()

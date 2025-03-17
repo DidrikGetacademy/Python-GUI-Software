@@ -11,7 +11,7 @@ def load_userdata():
      if User_data_Path.exists():
          try: 
              with open(User_data_Path,'r') as file:
-                 return json.load(file) #returns the loaded data
+                 return json.load(file) 
          except (json.JSONDecodeError, IOError) as e:
              logging.error(f"Error loading user data: {e}")
              return {}

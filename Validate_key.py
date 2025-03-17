@@ -43,6 +43,46 @@ def validate_key_with_Server(key_code):
         return False
 
 
+# def validate_subscription_status(user_id):
+#     try:
+#         user_data = get_user_data()
+#         print(f"userdata:",user_data)
+        
+#         headers = {
+#             "Content-Type": "application/json",
+#             "Authorization": f"Bearer {user_data.get('token', '')}"
+#         }
+        
+#         response = requests.post(
+#             "https://learnreflects.com/Server/validate_subscription.php",
+#             json={"user_id": user_id},
+#             headers=headers
+#         )
+#         response.raise_for_status()
+#         data = response.json()
+        
+#         #Checks if subscription is active
+#         if not data.get('active', False):
+#             print(f"Subscription is not active.")
+#             return False
+        
+
+#         #Checks if expiration is out on subscription.
+#         expiration_date = data.get('subscription_end', "")
+#         if expiration_date:
+#             from datetime import datetime
+#             exp_date = datetime.strptime(expiration_date, "%Y-%m-%d")
+#             if exp_date < datetime.now():
+#                 logging.error("Subscription expired!")
+#                 print(f"Error subscription expired.")
+         
+#                 return False
+
+#         return True
+
+#     except requests.exceptions.RequestException as e:
+#         logging.error(f"Subscription validation error: {str(e)}")
+#         return False
 
 
 
@@ -66,3 +106,5 @@ def validate_key(key_code):
             return True
         
     return validate_key_with_Server(key_code)
+
+

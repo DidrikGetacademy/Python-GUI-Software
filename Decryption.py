@@ -1,9 +1,9 @@
+from Validate_key import validate_subscription_status
 from Logger import logging
 from encryption import load_encryption_key
 from File_path import activation_key_path
 from cryptography.fernet import Fernet
 import json
-
 
 def decrypt_key(encrypted_key):
     encryption_key = load_encryption_key()
@@ -41,3 +41,21 @@ def load_key():
         logging.warning("Invalid or corrupted activation key.")
         return False
 
+def validate_jwt():
+    try:
+        encrypted_token = load_key() #Henter lagret kryptert token
+        decrypted_token = decrypt_key(encrypted_token) #dekrypterer tokenet
+
+        secret = Fernet(load_encryption_key()).decrypt(b'secret_key') #henter hemmlig nøkkel for å dekode JWT
+        payload = jwt.decode(decrypted_token, secret, algorithms=['HS256'])  # Dekoder JWT-tokenet
+
+        if not validate_subscription_status(payload['user_id']):#Sjekker om brukeren har aktivt abonnement
+            raise ValueError("No active Subscription!")
+        
+        print(f"Validation JWT VideoEnchancer successful!")
+        return True
+    except Exception as e:
+        logging.error(f"Token Validation Failed: {str(e)}")
+        print(f"Validation JWT VideoEnchancer ERROR!")
+        return False
+    
