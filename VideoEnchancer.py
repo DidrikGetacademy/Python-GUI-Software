@@ -304,8 +304,19 @@ supported_video_extensions = [
 
 
 
-####TOOL FOR TOOLCLASS#####
+####TOOL(4) FOR TOOLCLASS#####
 class SocialMediaUploading: #Upload videos too (instagram,facebook,youtube,tiktok) if available for api's. (options too use smolgent with a generate button for automatic generation of (title,description,keywords,hashtags.))
+    def __init__(self, parent_container):
+        self.parent_container = parent_container
+
+        self.container = CTkFrame(
+            master=self.parent_container,
+            fg_color="#000000",
+            border_width=2,
+            border_color="#404040",
+            corner_radius=10
+        )
+        self.container.place(relx=0.34, rely=0.85, relwidth=0.3, relheight=0.5, anchor="center")
 
 
 
@@ -323,8 +334,7 @@ class SocialMediaUploading: #Upload videos too (instagram,facebook,youtube,tikto
 
 
 
-
-####TOOL FOR TOOLCLASS#####
+####TOOL(3) FOR TOOLCLASS#####
 class SmolAgent:####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
     def __init__(self, parent_container):
         print("Initalizing SmolAgent ")
@@ -343,7 +353,6 @@ class SmolAgent:####Agent that retrieve transcript from video, and search the we
         self.create_metadata_button()      
 
     def create_file_selection_menu(self):
-     
             self.file_menu_var = StringVar(value="No files uploaded")
             self.file_menu = CTkOptionMenu(
                 master=self.container,
@@ -455,7 +464,7 @@ class SmolAgent:####Agent that retrieve transcript from video, and search the we
 
 
 
-####TOOL FOR TOOLCLASS#####
+####TOOL(2) FOR TOOLCLASS#####
 ####Youtube Download#####
 global youtube_progress_var
 def place_youtube_download_menu(parent_container):
@@ -864,11 +873,6 @@ def start_youtube_download():
 
         
 
-
-
-
-
-
 def get_ffmpeg_details(file_path):
     """
     Uses ffmpeg.probe to extract metadata from a video file.
@@ -950,7 +954,7 @@ def get_ffmpeg_details(file_path):
 
 
 
-####TOOL FOR TOOLCLASS#####
+####TOOL(1) FOR TOOLCLASS#####
 class MediaInfoAnalyst:
     def __init__(self,parent_container):
         self.parent_container = parent_container
@@ -1128,7 +1132,7 @@ class MediaInfoAnalyst:
 
 
 ####TOOLCLASS#####
-### a class with list of available tools that changes window for each tool. ex, youtube download, smolagent, 
+### a class with list of available tools that changes window for each tool on the main window.
 class ToolWindowClass:
     def __init__(self, master):
         self.master = master
@@ -1142,7 +1146,7 @@ class ToolWindowClass:
         self.menu_frame.pack(side="top", fill="x", pady=(0, 10))
 
   
-        self.tool_list = ['YouTube Downloader', 'SmolAgent', 'Mediainfo_analyst']
+        self.tool_list = ['Mediainfo_analyst', 'LR Agent', 'YouTube Downloader']
         self.tool_menu_var = StringVar(value=self.tool_list[0])
         self.tool_menu = CTkOptionMenu(
             master=self.menu_frame,
@@ -1168,12 +1172,14 @@ class ToolWindowClass:
      
         for widget in self.content_frame.winfo_children():
             widget.destroy()
-        if selected_tool == 'SmolAgent':
+        if selected_tool == 'LR Agent':
             self.create_smol_agent()
         elif selected_tool == 'YouTube Downloader':
             self.create_youtube_downloader()
         elif selected_tool == "Mediainfo_analyst":
             self.create_mediainfo_Analysist()
+        elif selected_tool == "Social Media Uploading":
+            self.Create_Social_Media_uploading()
 
     def create_smol_agent(self):
         self.smol_agent = SmolAgent(self.content_frame)
@@ -1190,15 +1196,11 @@ class ToolWindowClass:
         self.mediainfo_analyst.container.pack(fill="both", expand=True, padx=10, pady=10)
 
 
-    def Social_Media_uploading(self):
+    def Create_Social_Media_uploading(self):
         self.socialMediaUploading = SocialMediaUploading(self.content_frame)
         self.socialMediaUploading.container.pack(fill="both", expand=True, padx=10, pady=10)
 
     
-
-
-
-
 
     def format_details(self, details):
         """
@@ -1267,6 +1269,15 @@ class ToolWindowClass:
 
         except json.JSONDecodeError:
             return "Error: Failed to parse the details."
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1564,11 +1575,6 @@ def load_model_if_needed(model_name):
 
 
 
-
-
-
-
-
 def check_model_loading_progress():
     global model_loading_thread, current_loaded_model,window
     if model_loading_thread.is_alive():
@@ -1580,6 +1586,64 @@ def check_model_loading_progress():
         else:
             window.preview_button.configure(state=DISABLED)
             info_message.set("Model load failed")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1615,6 +1679,11 @@ class LoadingIcon:
             self.label.configure(image=self.frames[self.current_frame])
             self.current_frame = (self.current_frame + 1) % len(self.frames)
             self.master.after(50,self.animate)
+
+
+
+
+
 
 
 
@@ -1773,6 +1842,9 @@ def select_AI_from_menu(selected_option: str) -> None:
         daemon=True
     )
     model_loading_thread.start()
+
+
+
 
 
 
@@ -2062,6 +2134,9 @@ class AI:
 
     
           
+
+
+
 
     
     
