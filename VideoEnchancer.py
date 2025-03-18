@@ -290,9 +290,42 @@ supported_video_extensions = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ####TOOL FOR TOOLCLASS#####
-####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
-class SmolAgent:
+class SocialMediaUploading: #Upload videos too (instagram,facebook,youtube,tiktok) if available for api's. (options too use smolgent with a generate button for automatic generation of (title,description,keywords,hashtags.))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+####TOOL FOR TOOLCLASS#####
+class SmolAgent:####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
     def __init__(self, parent_container):
         print("Initalizing SmolAgent ")
         self.parent_container = parent_container
@@ -353,6 +386,55 @@ class SmolAgent:
             border_color="#0096FF"
         )
         self.metadata_btn.place(relx=column2_x - 0.14, rely=row4_y - 0.75, anchor="center")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -803,6 +885,71 @@ def get_ffmpeg_details(file_path):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ####TOOL FOR TOOLCLASS#####
 class MediaInfoAnalyst:
     def __init__(self,parent_container):
@@ -922,6 +1069,64 @@ class MediaInfoAnalyst:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ####TOOLCLASS#####
 ### a class with list of available tools that changes window for each tool. ex, youtube download, smolagent, 
 class ToolWindowClass:
@@ -984,7 +1189,17 @@ class ToolWindowClass:
         self.mediainfo_analyst = MediaInfoAnalyst(self.content_frame)
         self.mediainfo_analyst.container.pack(fill="both", expand=True, padx=10, pady=10)
 
+
+    def Social_Media_uploading(self):
+        self.socialMediaUploading = SocialMediaUploading(self.content_frame)
+        self.socialMediaUploading.container.pack(fill="both", expand=True, padx=10, pady=10)
+
     
+
+
+
+
+
     def format_details(self, details):
         """
         Format and structure the JSON data for better readability in the textbox.
@@ -1052,6 +1267,68 @@ class ToolWindowClass:
 
         except json.JSONDecodeError:
             return "Error: Failed to parse the details."
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1345,6 +1622,54 @@ class LoadingIcon:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # GUI place functions ---------------------------
 def create_placeholder_image(width, height):
     img = Image.new('RGB', (width, height), color='#000000')
@@ -1448,6 +1773,59 @@ def select_AI_from_menu(selected_option: str) -> None:
         daemon=True
     )
     model_loading_thread.start()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2004,6 +2382,65 @@ class AI:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # GUI utils ---------------------------
 class MessageBox(CTkToplevel):
 
@@ -2173,6 +2610,51 @@ class MessageBox(CTkToplevel):
         self.placeInfoMessageTitleSubtitle()
         self.placeInfoMessageOptionsText()
         self.placeInfoMessageOkButton()    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2353,11 +2835,7 @@ class FileWidget(CTkScrollableFrame):
 
         return ctk_icon
         
-        
-        
-        
-
-        
+    
         
     def extract_file_info(self, file_path) -> tuple:
         
@@ -2415,6 +2893,51 @@ class FileWidget(CTkScrollableFrame):
                             )
 
         return file_infos, file_icon
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2596,6 +3119,54 @@ def create_active_button(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # File Utils functions ------------------------
 def create_dir(name_dir: str) -> None:
     if os_path_exists(name_dir):
@@ -2763,6 +3334,61 @@ def prepare_output_video_directory_name(
     output_path += to_append
 
     return output_path
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3076,6 +3702,49 @@ def copy_file_metadata(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Core functions ------------------------
 def check_upscale_steps() -> None:
     sleep(1)
@@ -3299,6 +3968,49 @@ def upscale_image(
         )
 
     copy_file_metadata(image_path, upscaled_image_path)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3531,6 +4243,33 @@ def check_forgotten_video_frames(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # GUI utils function ---------------------------
 def check_if_file_is_video(
         file: str
@@ -3583,10 +4322,6 @@ def user_input_checks() -> bool:
 
    
 
-    
-     
-   # VRAM limiter
-    # Tiles resolution 
     try: tiles_resolution = 100 * int(float(str(selected_VRAM_limiter.get())))
     except:
         info_message.set("VRAM/RAM value must be a numeric value")
@@ -3756,6 +4491,30 @@ def select_image_extension_from_menu(selected_option: str) -> None:
 def select_video_extension_from_menu(selected_option: str) -> None:
     global selected_video_extension   
     selected_video_extension = selected_option
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4028,6 +4787,31 @@ def open_info_cpu():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def place_output_path_textbox():
     output_path_button  = create_info_button(open_info_output_path, "Output path", width = 15)
     output_path_textbox = create_text_box_output_path(selected_output_path) 
@@ -4039,9 +4823,6 @@ def place_output_path_textbox():
 
     )
 
-
-
-  
     output_path_button.place(relx = column1_5_x - 0.56, rely = row0_y - 0.11, anchor = "center")
     output_path_textbox.place(relx = column1_5_x - 0.56, rely  = row0_y - 0.08, anchor = "center")
     select_output_path_button.place(relx = column2_x - 0.612, rely  = row0_y - 0.08, anchor = "center")
@@ -4221,6 +5002,34 @@ def place_input_output_resolution_textboxs():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Main functions ---------------------------
 def on_app_close() -> None:
     window.grab_release()
@@ -4286,6 +5095,37 @@ def on_app_close() -> None:
     
 
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     
 class VideoEnhancer():

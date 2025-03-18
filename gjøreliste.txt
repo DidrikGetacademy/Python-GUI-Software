@@ -1,3 +1,5 @@
+0. sette opp SocialMediaUploading class for og laste opp til youtube, og evt andre plattformer. der det er mulig med api. 
+
 1. Sette opp ordentlig styling/utseende på programvaren på alle frames, fra brukerkonto,login,registering osv. + videoenchancer programvaren
 
 2. finne ut om cookies for å bruke ytdllp kan brukes generelt, altså ha 1 .txt cookie fil eller om hver bruker må hente ut sin egen youtube cookie på noe måte
@@ -10,8 +12,9 @@
 
 6.når jeg skal pakke systemet. så må jeg først pakke videoenchancer.py til en egen exe. sjekk (bulding folder)  deretter må jeg pakke  (bruker,inlogging,activation,registrating,accountmenu etc)  med sammen videoenehcancer.exe. ### Jeg må forsikre meg/løse det sånn at man ikke kan få tilgang til videoenchancer.exe uten og ha gått igjennom (account management og man har gyldig subscription). så jeg må finne ut en måte og låse videoenehcancer.exe sånn at det ikke kan kjøres hvor mindre man er logget inn fra en bruker som har aktiv subscription
 
-6. Gå igjennom og løse alle error, evt lage en error liste. og når alt dette er oppfylt og programvaren fungerer. så skal ikke flere ideer/endringer implementeres før programvaren er ute. deretter evt implementere system for å kunne oppdatere programvaren i fremtiden dersom endringer eller bugs skal fikses. 
+7. Gå igjennom og løse alle error, evt lage en error liste. og når alt dette er oppfylt og programvaren fungerer. så skal ikke flere ideer/endringer implementeres før programvaren er ute. deretter evt implementere system for å kunne oppdatere programvaren i fremtiden dersom endringer eller bugs skal fikses. 
 
+8. Finne flere AI modeller for video/audio opskallering, konvertere de til onnx format og implementere de i programvaren
 
 [ERROR LISTE] --> Oppdateres underveis og tas til slutt for mer effeketivitet
 

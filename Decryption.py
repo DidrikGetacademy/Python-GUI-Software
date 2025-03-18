@@ -1,9 +1,9 @@
-from Validate_key import validate_subscription_status
 from Logger import logging
 from encryption import load_encryption_key
 from File_path import activation_key_path
 from cryptography.fernet import Fernet
 import json
+import jwt
 
 def decrypt_key(encrypted_key):
     encryption_key = load_encryption_key()
@@ -41,7 +41,12 @@ def load_key():
         logging.warning("Invalid or corrupted activation key.")
         return False
 
+
+
+
+
 def validate_jwt():
+    from Validate_key import validate_subscription_status
     try:
         encrypted_token = load_key() #Henter lagret kryptert token
         decrypted_token = decrypt_key(encrypted_token) #dekrypterer tokenet

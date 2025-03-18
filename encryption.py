@@ -32,10 +32,12 @@ def load_encryption_key():
 
 
 def save_key(encrypted_key):
-    key_data = {"key_code": encrypted_key.decode()}  # Assuming you want to store the encrypted key as a string
+    key_data = {"key_code": encrypted_key.decode()} 
     with open(activation_key_path, "w") as file:
         json.dump(key_data, file)
     logging.info("Saved encrypted key to activation_key.json")
+
+
 
 
 
