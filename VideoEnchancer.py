@@ -316,7 +316,61 @@ class SocialMediaUploading: #Upload videos too (instagram,facebook,youtube,tikto
             border_color="#404040",
             corner_radius=10
         )
-        self.container.place(relx=0.34, rely=0.85, relwidth=0.3, relheight=0.5, anchor="center")
+        self.container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+
+   
+        self.create_widgets()
+
+    def create_widgets(self):
+       
+        self.top_bar = CTkFrame(
+            master=self.container,
+            fg_color="#282828"
+        )
+        self.top_bar.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+
+   
+        self.file_menu = CTkOptionMenu(
+            master=self.top_bar,
+            values=['Youtube','Instagram','Tiktok'],
+            width=200,
+            height=30,
+            font=bold11,
+            dropdown_font=bold11,
+            fg_color="#282828",
+            button_color="#404040",
+            text_color="#FFFFFF",
+        )
+        self.file_menu.pack(side="left", padx=10, pady=5)
+
+    
+        self.Upload = CTkButton(
+            master=self.top_bar,
+            text="Upload",
+            width=140,
+            height=30,
+            font=bold11,
+            border_width=1,
+            fg_color="#282828",
+            text_color="#E0E0E0",
+            border_color="#0096FF",
+            command=None
+        )
+        self.Upload.pack(side="left", padx=10, pady=5)
+
+    
+        self.info_button_Social_media_uploading = create_info_button(
+            open_socialMedia_tool_info,
+            text="INFO",
+            width=15,
+            master=self.top_bar
+        )
+        self.info_button_Social_media_uploading.pack(side="left", padx=10, pady=5)
+
+  
+
+
+
 
 
 
@@ -335,40 +389,93 @@ class SocialMediaUploading: #Upload videos too (instagram,facebook,youtube,tikto
 
 
 ####TOOL(3) FOR TOOLCLASS#####
-class SmolAgent:####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
+####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
+class LR_AGENT:
+    """Agent that retrieves transcripts, searches the web, and generates optimized metadata for videos."""
+
     def __init__(self, parent_container):
-        print("Initalizing SmolAgent ")
+        print("Initializing LR_AGENT")
         self.parent_container = parent_container
-        self.uploaded_files = []  
+        self.uploaded_files = []
 
+        # Container setup
         self.container = CTkFrame(
-                    master=self.parent_container,
-                    fg_color="#000000",  
-                    border_width=2,
-                    border_color="#404040",  
-                    corner_radius=10
-                )
-        self.container.place(relx=0.34, rely=0.85, relwidth=0.3, relheight=0.5, anchor="center")
-        self.create_file_selection_menu()  
-        self.create_metadata_button()      
+            master=self.parent_container,
+            fg_color="#000000",
+            border_width=2,
+            border_color="#404040",
+            corner_radius=10
+        )
+        self.container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-    def create_file_selection_menu(self):
-            self.file_menu_var = StringVar(value="No files uploaded")
-            self.file_menu = CTkOptionMenu(
-                master=self.container,
-                variable=self.file_menu_var,
-                values=[],
-                width=200,
-                height=30,
-                font=bold11,
-                dropdown_font=bold11,
-                fg_color=widget_background_color,
-                button_color=widget_background_color
-            )
-            self.file_menu.place(relx=column2_x - 0.44, rely=row4_y - 0.75, anchor="center")
+   
+        self.create_widgets()
 
+    def create_widgets(self):
+       
+        self.top_bar = CTkFrame(
+            master=self.container,
+            fg_color="#282828"
+        )
+        self.top_bar.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+
+   
+        self.file_menu_var = StringVar(value="No files uploaded")
+        self.file_menu = CTkOptionMenu(
+            master=self.top_bar,
+            variable=self.file_menu_var,
+            values=[],
+            width=200,
+            height=30,
+            font=bold11,
+            dropdown_font=bold11,
+            fg_color="#282828",
+            button_color="#404040",
+            text_color="#FFFFFF"
+        )
+        self.file_menu.pack(side="left", padx=10, pady=5)
+
+    
+        self.metadata_btn = CTkButton(
+            master=self.top_bar,
+            text="Generate Metadata",
+            width=140,
+            height=30,
+            font=bold11,
+            border_width=1,
+            fg_color="#282828",
+            text_color="#E0E0E0",
+            border_color="#0096FF",
+            command=self.generate_metadata
+        )
+        self.metadata_btn.pack(side="left", padx=10, pady=5)
+
+    
+        self.info_button_LearnReflect_Agent = create_info_button(
+            open_LR_Agent_tool_info,
+            text="INFO",
+            width=15,
+            master=self.top_bar
+        )
+        self.info_button_LearnReflect_Agent.pack(side="left", padx=10, pady=5)
+
+  
+        self.details_text = CTkTextbox(
+            master=self.container,
+            width=1000,
+            height=500,
+            font=("Arial", 20),
+            corner_radius=10,
+            state="disabled"
+        )
+        self.details_text.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+
+   
+        self.container.columnconfigure(0, weight=1)
+        self.container.rowconfigure(1, weight=1)
 
     def update_file_list(self, new_files):
+        """Update dropdown with new files"""
         self.uploaded_files.extend(new_files)
         file_names = [os_path_basename(f) for f in self.uploaded_files]
         self.file_menu.configure(values=file_names)
@@ -380,21 +487,11 @@ class SmolAgent:####Agent that retrieve transcript from video, and search the we
         self.uploaded_files = []
         self.file_menu.configure(values=[])
         self.file_menu_var.set("No files uploaded")
-        
-    def create_metadata_button(self):
-        """Create metadata generation button"""
-        self.metadata_btn = CTkButton(
-            master=self.container,
-            text="Generate Metadata",
-            width=140,
-            height=30,
-            font=bold11,
-            border_width=1,
-            fg_color="#282828",
-            text_color="#E0E0E0",
-            border_color="#0096FF"
-        )
-        self.metadata_btn.place(relx=column2_x - 0.14, rely=row4_y - 0.75, anchor="center")
+
+    def generate_metadata(self):
+        """Placeholder method for metadata generation — extend this logic."""
+        print("Generating video metadata...")
+
 
 
 
@@ -484,6 +581,16 @@ def place_youtube_download_menu(parent_container):
     youtube_frame.place(relx=0.5, rely=0.5, relwidth=1, relheight=1, anchor="center")
 
 
+    
+    Info_button_youtubedownloader = create_info_button(
+            open_YoutubeDownloader_tool_info,
+            "INFO",
+            width=100,
+            master=youtube_frame
+        )
+    Info_button_youtubedownloader.place(relx=0.12, rely=0.68, anchor="e")
+
+
 
     bg_label = CTkLabel(
         master=youtube_frame,
@@ -507,7 +614,7 @@ def place_youtube_download_menu(parent_container):
     progress_label.place(relx=0.25, rely=0.4, anchor="center")
 
 
-    #input for the youtubelink
+
     CTkLabel(
         master=youtube_frame,
         text="YouTube URL:",
@@ -558,6 +665,7 @@ def place_youtube_download_menu(parent_container):
         border_color="white",
         border_width=1
     ).place(relx=0.12, rely=0.6, anchor="e")
+  
 
     global upload_button
     upload_button = CTkButton(
@@ -700,10 +808,13 @@ def load_cookie_file_path():
     try:
         if COOKIE_PATH_FILE.exists():
             cookie_file_path = str(COOKIE_PATH_FILE)
+            print(f"Cookie file path exsist at: {cookie_file_path}")
         else:
             cookie_file_path = None
+            print(f"cookie file path is None cause it does not exists.")
     except Exception as e:        
         cookie_file_path = None
+        print(f"Error exception cookie file path is None ")
 
 
 def update_cookie_timestamps(file_path):
@@ -785,10 +896,8 @@ def get_available_formats(youtube_url):
             }
     if cookie_file_path:
         ydl_opts["cookiefile"] = cookie_file_path
-    if not cookie_file_path or (cookie_file_path and COOKIE_PATH_FILE.exists()):
-        delete_cookie_file_and_reset_button()
 
-        print(f"cookie_file_path when getting available format: {cookie_file_path}")
+    print(f"cookie_file_path when getting available format: {cookie_file_path}")
 
     try: 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -806,8 +915,11 @@ def get_available_formats(youtube_url):
 
             return video_formats, audio_formats
         
-    except Exception as e:
+    except yt_dlp.utils.DownloadError  as e:
         print(f"Error fetching formats: {e}")
+        if "cookies" in str(e).lower() or "403" in str(e):
+            print("⚠️ Cookie file seems broken or expired. Resetting...")
+            delete_cookie_file_and_reset_button()
         return [], []
 
 
@@ -835,6 +947,9 @@ def download_youtube_link(youtube_url,output_path, progress_callback=None):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
              ydl.download([youtube_url])
         return "Download Complete!"
+    except yt_dlp.utils.DownloadError as e:
+        return f"Error: {str(e)}"
+    
     except Exception as e:
         return f"Error: {str(e)}"
     
@@ -951,79 +1066,106 @@ def get_ffmpeg_details(file_path):
 
 
 
-
-
-
 ####TOOL(1) FOR TOOLCLASS#####
 class MediaInfoAnalyst:
-    def __init__(self,parent_container):
+    def __init__(self, parent_container):
         self.parent_container = parent_container
         self.selected_file_list = selected_file_list
 
 
         self.container = CTkFrame(
             master=self.parent_container,
-            fg_color="#000000",  
+            fg_color="black",
             border_width=2,
-            border_color="#404040",  
+            border_color="#404040",
             corner_radius=10
         )
-        self.container.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8, relheight=0.8)
-        self.create_widgets()
+        self.container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
+        self.create_widgets()
         self.populate_dropdown()
 
     def create_widgets(self):
+        top_bar = CTkFrame(
+            master=self.container,
+            fg_color="#282828"
+        )
+        top_bar.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
 
-        self.menu_frame = CTkFrame(master=self.container, fg_color="transparent")
-        self.menu_frame.pack(side="top", fill="x", pady=(10, 5))
-
-
+      
         self.file_menu_var = StringVar(value="No files uploaded")
         self.file_menu = CTkOptionMenu(
-            master=self.menu_frame,
+            master=top_bar,
             variable=self.file_menu_var,
-            values=[],  
-            width=200,
+            values=[],
+            width=150,
             height=30,
             fg_color="#282828",
             button_color="#404040",
             text_color="#FFFFFF"
         )
-        self.file_menu.pack(side="left", padx=10)
+        self.file_menu.pack(side="left", padx=10, pady=5)
 
-    
+  
         self.get_details_btn = CTkButton(
-            master=self.menu_frame,
-            text="Get Details",
+            master=top_bar,
+            text="Fetch MediaInfo",
             width=140,
             height=30,
+            border_width=1,
+            font=bold11,
             fg_color="#282828",
             text_color="#E0E0E0",
             border_color="#0096FF",
-            command=self.get_details  
+            command=self.get_details
         )
-        self.get_details_btn.pack(side="right", padx=10)
+        self.get_details_btn.pack(side="left", padx=10, pady=5)
 
+   
+        self.info_button_mediainfo_analyst = create_info_button(
+            open_mediaInfo_Analyst,
+            text="INFO",
+            width=15,
+            master=top_bar
+        )
+        self.info_button_mediainfo_analyst.pack(side="left", padx=10, pady=5)
 
+   
         self.details_text = CTkTextbox(
             master=self.container,
             width=1000,
             height=500,
-            font=("Arial",20),
+            font=("Arial", 20),
             corner_radius=10,
-            state="disabled"  
-
+            state="disabled"
         )
-        self.details_text.place(relx=0.5, rely=0.5, anchor="center")
+        self.details_text.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 
-  
+        self.container.columnconfigure(0, weight=1)
+        self.container.rowconfigure(1, weight=1)
+
     def populate_dropdown(self):
+        max_length = 20
         file_names = [f.split("/")[-1] for f in self.selected_file_list]
-        self.file_menu.configure(values=file_names)
-        if file_names:
-            self.file_menu_var.set(file_names[0])
-    
+
+        truncated_names = [name if len(name) <= max_length else name[:max_length] + '...' for name in file_names]
+
+        self.file_menu.configure(values=truncated_names)
+
+        if truncated_names:
+            self.file_menu_var.set(truncated_names[0])
+
+    def place_mediainfo_analyst_textbox(self):
+        Info_button_mediainfo_analyst = create_info_button(
+            open_mediaInfo_Analyst,
+            text="MediaInfo (info)",
+            width=15,
+            master=self.container
+        )
+        Info_button_mediainfo_analyst.grid(row=1, column=0, pady=10)
+
+
+
 
     def clear_file_list(self):
         """
@@ -1052,18 +1194,80 @@ class MediaInfoAnalyst:
             self.details_text.insert(END, "No file selected or file not found.")
 
 
+
+
     def format_details(self, details):
         """
         Format and structure the JSON data for better readability in the textbox.
         """
         try:
+      
             parsed_details = json.loads(details)
             
-            formatted_data = json.dumps(parsed_details, indent=4)
+    
+            formatted_data = ""
 
+          
+            formatted_data += "\n### General Information ###\n"
+            format_info = parsed_details.get('format', {})
+            formatted_data += f"Filename: {format_info.get('filename', 'N/A')}\n"
+            formatted_data += f"Format: {format_info.get('format_name', 'N/A')} ({format_info.get('format_long_name', 'N/A')})\n"
+            formatted_data += f"Duration: {format_info.get('duration', 'N/A')} seconds\n"
+            formatted_data += f"Size: {format_info.get('size', 'N/A')} bytes\n"
+            formatted_data += f"Bitrate: {format_info.get('bit_rate', 'N/A')} bps\n"
+            formatted_data += f"Probe Score: {format_info.get('probe_score', 'N/A')}\n"
+            formatted_data += "-" * 50 + "\n"
+
+       
+            streams = parsed_details.get('streams', [])
+            for stream in streams:
+                formatted_data += f"### Stream {stream.get('index', 'N/A')} ###\n"
+                formatted_data += f"Codec: {stream.get('codec_long_name', 'N/A')}\n"
+                formatted_data += f"Codec Type: {stream.get('codec_type', 'N/A')}\n"
+                formatted_data += f"Resolution: {stream.get('width', 'N/A')} x {stream.get('height', 'N/A')}\n"
+                formatted_data += f"Aspect Ratio: {stream.get('display_aspect_ratio', 'N/A')}\n"
+                formatted_data += f"Frame Rate: {stream.get('r_frame_rate', 'N/A')}\n"
+                formatted_data += f"Bitrate: {stream.get('bit_rate', 'N/A')}\n"
+                formatted_data += f"Duration: {stream.get('duration', 'N/A')} seconds\n"
+                formatted_data += f"Has B-Frames: {stream.get('has_b_frames', 'N/A')}\n"
+                formatted_data += f"Sample Aspect Ratio: {stream.get('sample_aspect_ratio', 'N/A')}\n"
+                formatted_data += f"Chroma Location: {stream.get('chroma_location', 'N/A')}\n"
+                formatted_data += f"Field Order: {stream.get('field_order', 'N/A')}\n"
+                formatted_data += f"Pixel Format: {stream.get('pix_fmt', 'N/A')}\n"
+                formatted_data += "-" * 50 + "\n"
+
+              
+                disposition = stream.get('disposition', {})
+                formatted_data += "Disposition:\n"
+                for key, value in disposition.items():
+                    formatted_data += f"  {key}: {value}\n"
+
+           
+                tags = stream.get('tags', {})
+                if tags:
+                    formatted_data += "Tags:\n"
+                    for tag_key, tag_value in tags.items():
+                        formatted_data += f"  {tag_key}: {tag_value}\n"
+                formatted_data += "-" * 50 + "\n"
+
+       
+            tags = format_info.get('tags', {})
+            if tags:
+                formatted_data += "\n### File Tags ###\n"
+                for tag_key, tag_value in tags.items():
+                    formatted_data += f"{tag_key}: {tag_value}\n"
+                formatted_data += "-" * 50 + "\n"
+
+        
             return formatted_data
+
         except json.JSONDecodeError:
             return "Error: Failed to parse the details."
+
+
+
+
+
 
 
 
@@ -1146,7 +1350,7 @@ class ToolWindowClass:
         self.menu_frame.pack(side="top", fill="x", pady=(0, 10))
 
   
-        self.tool_list = ['Mediainfo_analyst', 'LR Agent', 'YouTube Downloader']
+        self.tool_list = ['Mediainfo_analyst', 'LR Agent', 'YouTube Downloader','Social Media Uploading']
         self.tool_menu_var = StringVar(value=self.tool_list[0])
         self.tool_menu = CTkOptionMenu(
             master=self.menu_frame,
@@ -1182,7 +1386,7 @@ class ToolWindowClass:
             self.Create_Social_Media_uploading()
 
     def create_smol_agent(self):
-        self.smol_agent = SmolAgent(self.content_frame)
+        self.smol_agent = LR_AGENT(self.content_frame)
         self.smol_agent.container.pack(fill="both", expand=True, padx=10, pady=10)
 
 
@@ -1201,86 +1405,6 @@ class ToolWindowClass:
         self.socialMediaUploading.container.pack(fill="both", expand=True, padx=10, pady=10)
 
     
-
-    def format_details(self, details):
-        """
-        Format and structure the JSON data for better readability in the textbox.
-        """
-        try:
-      
-            parsed_details = json.loads(details)
-            
-    
-            formatted_data = ""
-
-          
-            formatted_data += "\n### General Information ###\n"
-            format_info = parsed_details.get('format', {})
-            formatted_data += f"Filename: {format_info.get('filename', 'N/A')}\n"
-            formatted_data += f"Format: {format_info.get('format_name', 'N/A')} ({format_info.get('format_long_name', 'N/A')})\n"
-            formatted_data += f"Duration: {format_info.get('duration', 'N/A')} seconds\n"
-            formatted_data += f"Size: {format_info.get('size', 'N/A')} bytes\n"
-            formatted_data += f"Bitrate: {format_info.get('bit_rate', 'N/A')} bps\n"
-            formatted_data += f"Probe Score: {format_info.get('probe_score', 'N/A')}\n"
-            formatted_data += "-" * 50 + "\n"
-
-       
-            streams = parsed_details.get('streams', [])
-            for stream in streams:
-                formatted_data += f"### Stream {stream.get('index', 'N/A')} ###\n"
-                formatted_data += f"Codec: {stream.get('codec_long_name', 'N/A')}\n"
-                formatted_data += f"Codec Type: {stream.get('codec_type', 'N/A')}\n"
-                formatted_data += f"Resolution: {stream.get('width', 'N/A')} x {stream.get('height', 'N/A')}\n"
-                formatted_data += f"Aspect Ratio: {stream.get('display_aspect_ratio', 'N/A')}\n"
-                formatted_data += f"Frame Rate: {stream.get('r_frame_rate', 'N/A')}\n"
-                formatted_data += f"Bitrate: {stream.get('bit_rate', 'N/A')}\n"
-                formatted_data += f"Duration: {stream.get('duration', 'N/A')} seconds\n"
-                formatted_data += f"Has B-Frames: {stream.get('has_b_frames', 'N/A')}\n"
-                formatted_data += f"Sample Aspect Ratio: {stream.get('sample_aspect_ratio', 'N/A')}\n"
-                formatted_data += f"Chroma Location: {stream.get('chroma_location', 'N/A')}\n"
-                formatted_data += f"Field Order: {stream.get('field_order', 'N/A')}\n"
-                formatted_data += f"Pixel Format: {stream.get('pix_fmt', 'N/A')}\n"
-                formatted_data += "-" * 50 + "\n"
-
-              
-                disposition = stream.get('disposition', {})
-                formatted_data += "Disposition:\n"
-                for key, value in disposition.items():
-                    formatted_data += f"  {key}: {value}\n"
-
-           
-                tags = stream.get('tags', {})
-                if tags:
-                    formatted_data += "Tags:\n"
-                    for tag_key, tag_value in tags.items():
-                        formatted_data += f"  {tag_key}: {tag_value}\n"
-                formatted_data += "-" * 50 + "\n"
-
-       
-            tags = format_info.get('tags', {})
-            if tags:
-                formatted_data += "\n### File Tags ###\n"
-                for tag_key, tag_value in tags.items():
-                    formatted_data += f"{tag_key}: {tag_value}\n"
-                formatted_data += "-" * 50 + "\n"
-
-        
-            return formatted_data
-
-        except json.JSONDecodeError:
-            return "Error: Failed to parse the details."
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3077,6 +3201,7 @@ def create_info_button(
         command: Callable, 
         text: str,
         width: int = 150,
+        master=None
         ) -> CTkButton:
     
     bg_image = Image.open("./Assets/1.jpg")
@@ -3085,7 +3210,7 @@ def create_info_button(
 
     
     return CTkButton(
-        master  = window, 
+         master=master if master else window, 
         command = command,
         text          = text,
         fg_color      = "transparent",
@@ -4596,15 +4721,69 @@ def select_video_extension_from_menu(selected_option: str) -> None:
 
 
 
-
-
-
-
-
-
-
-
 # GUI info functions ---------------------------
+def open_socialMedia_tool_info():
+    option_list = [
+        "\n NOTES\n" 
+        "\nInstagram: \n" +
+        "\nYoutube: \n" +
+        "\nTiktok: \n" 
+    ]
+    MessageBox(
+        messageType = "info",
+        title       = "Social Media",
+        subtitle    = "Information about (Social Media Tool)",
+        default_value = "",
+        option_list   = option_list
+    )
+
+
+def open_mediaInfo_Analyst():
+    option_list = [
+        "\n NOTES\n" 
+        "\n open_mediaInfo_Analyst\n" 
+
+    ]
+    MessageBox(
+        messageType = "info",
+        title       = "open_mediaInfo_Analyst",
+        subtitle    = "open_mediaInfo_Analyst",
+        default_value = "",
+        option_list   = option_list
+    )
+
+
+def open_LR_Agent_tool_info():
+    option_list = [
+        "\n NOTES\n" 
+        "\nLearnReflect Agent: \n" 
+    ]
+    MessageBox(
+        messageType = "info",
+        title       = "LearnReflect Agent",
+        subtitle    = "Information about LearnReflect Agent",
+        default_value = "",
+        option_list   = option_list
+    )
+
+
+
+
+
+def open_YoutubeDownloader_tool_info():
+    option_list = [
+        "\n NOTES\n" 
+        "\n Youtube Downloader:\n" 
+    ]
+    MessageBox(
+        messageType = "info",
+        title       = "Youtube Downloader",
+        subtitle    = "Information about youtube downloader",
+        default_value = "",
+        option_list   = option_list
+    )
+
+
 def open_info_output_path():
     option_list = [
         "\n The default path is defined by the input files."
@@ -4621,6 +4800,9 @@ def open_info_output_path():
         default_value = default_output_path,
         option_list   = option_list
     )
+
+
+
 
 def open_info_AI_model():
     option_list = [
@@ -4653,6 +4835,9 @@ def open_info_AI_model():
         option_list   = option_list
     )
 
+
+
+
 def open_info_gpu():
     option_list = [
         "\n It is possible to select up to 4 GPUs, via the index (also visible in the Task Manager):\n" +
@@ -4678,6 +4863,10 @@ def open_info_gpu():
     )
 
 
+
+
+
+
 def open_info_audio_mode(): 
     option_list = [
         "Audio Mode Options:"
@@ -4693,6 +4882,9 @@ def open_info_audio_mode():
         option_list = option_list
     )
     
+
+
+
 
 def open_info_keep_frames():
     option_list = [
@@ -4711,6 +4903,9 @@ def open_info_keep_frames():
         option_list   = option_list
     )
     
+
+
+
 
 def open_info_AI_interpolation():
     option_list = [
@@ -4736,6 +4931,9 @@ def open_info_AI_interpolation():
         default_value = default_interpolation,
         option_list   = option_list
     )
+
+
+
 
 def open_info_AI_multithreading():
     option_list = [
@@ -4763,6 +4961,9 @@ def open_info_AI_multithreading():
         option_list   = option_list
     )
 
+
+
+
 def open_info_image_output():
     option_list = [
         " \n PNG\n  • very good quality\n  • slow and heavy file\n  • supports transparent images\n",
@@ -4778,6 +4979,9 @@ def open_info_image_output():
         default_value = default_image_extension,
         option_list   = option_list
     )
+
+
+
 
 def open_info_video_extension():
     option_list = [
@@ -4800,6 +5004,9 @@ def open_info_video_extension():
         option_list = option_list
     )
 
+
+
+
 def open_info_vram_limiter():
     option_list = [
         " It is important to enter the correct value according to the VRAM of selected GPU ",
@@ -4814,6 +5021,8 @@ def open_info_vram_limiter():
         default_value = default_VRAM_limiter,
         option_list   = option_list
     )
+
+
 
 def open_info_input_resolution():
     option_list = [
@@ -4853,20 +5062,42 @@ def open_info_cpu():
     )
 
 
+def place_input_output_resolution_textboxs():
+
+    def open_info_input_resolution():
+        option_list = [
+            " A high value (>70%) will create high quality photos/videos but will be slower",
+            " While a low value (<40%) will create good quality photos/videos but will much faster",
+
+            " \n For example, for a 1080p (1920x1080) image/video\n" + 
+            " • Input resolution 25% => input to AI 270p (480x270)\n" +
+            " • Input resolution 50% => input to AI 540p (960x540)\n" + 
+            " • Input resolution 75% => input to AI 810p (1440x810)\n" + 
+            " • Input resolution 100% => input to AI 1080p (1920x1080) \n",
+        ]
+        MessageBox(
+            messageType   = "info",
+            title         = "Input resolution %",
+            subtitle      = "This widget allows to choose the resolution input to the AI",
+            default_value = None,
+            option_list   = option_list
+        )
+
+    widget_row = row4_y
+
+    background = create_option_background()
+    background.place(relx = 0.75, rely = widget_row, relwidth = 0.48, anchor = "center")
+
+    info_button = create_info_button(open_info_input_resolution, "Input resolution")
+    option_menu = create_text_box(selected_input_resize_factor, width = little_textbox_width) 
+
+    info_button.place(relx = column_info1, rely = widget_row - 0.003, anchor = "center")
+    option_menu.place(relx = column_1_5,   rely = widget_row,         anchor = "center")
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+    info_button.place(relx = column_info2, rely = widget_row - 0.003, anchor = "center")
+    option_menu.place(relx = column_3,     rely = widget_row,         anchor = "center")
 
 
 
@@ -4890,17 +5121,13 @@ def open_info_cpu():
 def place_output_path_textbox():
     output_path_button  = create_info_button(open_info_output_path, "Output path", width = 15)
     output_path_textbox = create_text_box_output_path(selected_output_path) 
-    select_output_path_button = create_active_button(
-        command = open_output_path_action,
-        text    = "SELECT",
-        width   = 85,
-        height  = 25,
-
-    )
+    select_output_path_button = create_active_button(command = open_output_path_action, text = "SELECT",  width   = 85, height  = 25)
 
     output_path_button.place(relx = column1_5_x - 0.56, rely = row0_y - 0.11, anchor = "center")
     output_path_textbox.place(relx = column1_5_x - 0.56, rely  = row0_y - 0.08, anchor = "center")
     select_output_path_button.place(relx = column2_x - 0.612, rely  = row0_y - 0.08, anchor = "center")
+
+
 
 def place_AI_menu():
     AI_menu_button = create_info_button(open_info_AI_model, "AI model")
@@ -4908,6 +5135,9 @@ def place_AI_menu():
 
     AI_menu_button.place(relx = column0_x - 0.15, rely = row1_y - 0.05, anchor = "center")
     AI_menu.place(relx = column0_x- 0.15, rely = row1_y, anchor = "center")
+
+
+
 
 def place_AI_interpolation_menu():
     interpolation_button = create_info_button(open_info_AI_interpolation, "AI Interpolation")
@@ -4917,12 +5147,16 @@ def place_AI_interpolation_menu():
     interpolation_menu.place(relx = column0_x- 0.15, rely  = row3_y, anchor = "center")
  
 
+
+
 def place_AI_multithreading_menu():
     AI_multithreading_button = create_info_button(open_info_AI_multithreading, "AI multithreading")
     AI_multithreading_menu   = create_option_menu(select_AI_multithreading_from_menu, AI_multithreading_list, default_AI_multithreading)
     
     AI_multithreading_button.place(relx = column0_x- 0.15, rely = row2_y - 0.05, anchor = "center")
     AI_multithreading_menu.place(relx = column0_x- 0.15, rely  = row2_y, anchor = "center")
+
+
 
 
 def place_input_resolution_textbox():
@@ -4933,12 +5167,16 @@ def place_input_resolution_textbox():
     resize_factor_textbox.place(relx=column1_x- 0.35,rely=row4_y,anchor="center")
 
 
+
+
 def place_gpu_menu():
     gpu_button = create_info_button(open_info_gpu, "GPU")
     gpu_menu   = create_option_menu(select_gpu_from_menu, gpus_list, default_gpu)
     
     gpu_button.place(relx = column1_x- 0.35, rely = row1_y - 0.053, anchor = "center")
     gpu_menu.place(relx = column1_x- 0.35, rely  = row1_y, anchor = "center")
+
+
 
 
 def place_vram_textbox():
@@ -4949,12 +5187,16 @@ def place_vram_textbox():
     vram_textbox.place(relx = column1_x- 0.35, rely  = row2_y, anchor = "center")
 
 
+
+
 def place_cpu_textbox():
     cpu_button  = create_info_button(open_info_cpu, "CPU number")
     cpu_textbox = create_text_box(selected_cpu_number)
 
     cpu_button.place(relx = column1_x- 0.35, rely = row3_y - 0.05, anchor = "center")
     cpu_textbox.place(relx = column1_x- 0.35, rely  = row3_y, anchor = "center")
+
+
 
     
 def place_Audio_Selection_menu():
@@ -4965,6 +5207,8 @@ def place_Audio_Selection_menu():
     Audio_mode_menu.place(relx = column0_x- 0.15, rely = row4_y, anchor = "center")
 
 
+
+
 def place_keep_frames_menu():
     keep_frames_button = create_info_button(open_info_keep_frames, "Keep frames")
     keep_frames_menu   = create_option_menu(select_save_frame_from_menu, keep_frames_list, default_keep_frames)
@@ -4973,6 +5217,8 @@ def place_keep_frames_menu():
     keep_frames_menu.place(relx = column1_x- 0.4, rely = row4_y, anchor = "center")
     
 
+
+
 def place_image_output_menu():
     file_extension_button = create_info_button(open_info_image_output, "Image output")
     file_extension_menu   = create_option_menu(select_image_extension_from_menu, image_extension_list, default_image_extension)
@@ -4980,12 +5226,15 @@ def place_image_output_menu():
     file_extension_button.place(relx = column2_x- 0.6277, rely = row1_y - 0.1455, anchor = "center")
     file_extension_menu.place(relx = column2_x- 0.63, rely = row1_y -0.1, anchor = "center")
 
+
+
 def place_video_extension_menu():
     video_extension_button = create_info_button(open_info_video_extension, "Video output")
     video_extension_menu   = create_option_menu(select_video_extension_from_menu, video_extension_list, default_video_extension)
     
     video_extension_button.place(relx = column2_x- 0.71, rely = row2_y - 0.25, anchor = "center")
     video_extension_menu.place(relx = column2_x- 0.71, rely = row2_y - 0.205, anchor = "center")
+
 
 
 
@@ -5002,6 +5251,8 @@ def place_message_label():
     )
     message_label.place(relx = column2_x - 0.23, rely = row4_y - 0.615, anchor = "center")
 
+
+
 def place_stop_button(): 
     stop_button = create_active_button(
         command = stop_button_command,
@@ -5013,6 +5264,8 @@ def place_stop_button():
     )
     stop_button.place(relx = column2_x- 0.7 , rely = row4_y + 0.04, anchor = "center")
 
+
+
 def place_upscale_button(): 
     upscale_button = create_active_button(
         command = upscale_button_command,
@@ -5023,6 +5276,8 @@ def place_upscale_button():
     )
     upscale_button.place(relx = column2_x - 0.625, rely = row4_y + 0.04, anchor = "center")
     upscale_button.lift()
+
+
 def create_option_background():
     return CTkFrame(
         master   = window,
@@ -5032,46 +5287,7 @@ def create_option_background():
         corner_radius = 10
     )
 
-def place_input_output_resolution_textboxs():
 
-    def open_info_input_resolution():
-        option_list = [
-            " A high value (>70%) will create high quality photos/videos but will be slower",
-            " While a low value (<40%) will create good quality photos/videos but will much faster",
-
-            " \n For example, for a 1080p (1920x1080) image/video\n" + 
-            " • Input resolution 25% => input to AI 270p (480x270)\n" +
-            " • Input resolution 50% => input to AI 540p (960x540)\n" + 
-            " • Input resolution 75% => input to AI 810p (1440x810)\n" + 
-            " • Input resolution 100% => input to AI 1080p (1920x1080) \n",
-        ]
-
-        MessageBox(
-            messageType   = "info",
-            title         = "Input resolution %",
-            subtitle      = "This widget allows to choose the resolution input to the AI",
-            default_value = None,
-            option_list   = option_list
-        )
-
-
-
-    widget_row = row4_y
-
-    background = create_option_background()
-    background.place(relx = 0.75, rely = widget_row, relwidth = 0.48, anchor = "center")
-
-    # Input resolution %
-    info_button = create_info_button(open_info_input_resolution, "Input resolution")
-    option_menu = create_text_box(selected_input_resize_factor, width = little_textbox_width) 
-
-    info_button.place(relx = column_info1, rely = widget_row - 0.003, anchor = "center")
-    option_menu.place(relx = column_1_5,   rely = widget_row,         anchor = "center")
-
-
-
-    info_button.place(relx = column_info2, rely = widget_row - 0.003, anchor = "center")
-    option_menu.place(relx = column_3,     rely = widget_row,         anchor = "center")
 
 
 
@@ -5239,9 +5455,9 @@ class VideoEnhancer():
         
         
 if __name__ == "__main__":
-    from Decryption import validate_jwt
-    if not validate_jwt():
-        sys.exit(1)
+   # from Decryption import validate_jwt
+   # if not validate_jwt():
+     #   sys.exit(1)
     
 
     multiprocessing_freeze_support()
