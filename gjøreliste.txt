@@ -16,6 +16,8 @@
 
 8. Finne flere AI modeller for video/audio opskallering, konvertere de til onnx format og implementere de i programvaren
 
+9. konvertere load_llama_instruct til onnx for raskere inference.
+
 [ERROR LISTE] --> Oppdateres underveis og tas til slutt for mer effeketivitet
 
 1. Når man skal laste ned video etter og ha fetcha format details, så blir bare lyd lasta ned, jeg må evt sette opp checkboks for om bare lyd eller om begge deler skal lastes ned. 

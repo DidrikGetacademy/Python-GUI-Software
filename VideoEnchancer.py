@@ -1,4 +1,5 @@
 import sys
+import os
 from functools  import cache
 from time       import sleep
 from webbrowser import open as open_browser
@@ -6,16 +7,16 @@ from subprocess import run  as subprocess_run
 import ffmpeg
 from shutil     import rmtree as remove_directory
 from timeit     import default_timer as timer
-from PIL import Image, ImageTk, ImageSequence
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from PIL import Image, ImageSequence
 import threading
 import cv2
+import requests
+import whisper 
+import ollama
 from Logger import logging
 from typing    import Callable
 from threading import Thread
 from itertools import repeat
-from concurrent.futures import ThreadPoolExecutor
 import yt_dlp
 from multiprocessing.pool import ThreadPool
 from PIL import Image, ImageDraw, ImageFont 
@@ -123,7 +124,26 @@ from customtkinter import (
     set_default_color_theme
 )
 
-import os
+
+
+def get_gpu_vram():
+    import psutil
+    try:
+        import wmi
+        w = wmi.WMI()
+        for gpu in w.Win32_VideoController():
+            if 'VRAM' in gpu.AdapterRAM:
+                   return min(4, int((psutil.virtual_memory().total / (1024**3)) * 0.7))  
+            return 4000
+    except:
+        return 4000
+    
+def get_cpu_number():
+    try:
+        cpu_number = max(1, int(os_cpu_count() // 2))
+        return cpu_number
+    except Exception as e:
+        return
 
 
 if sys.stdout is None: sys.stdout = open(os_devnull, "w")
@@ -180,13 +200,11 @@ global Smol_agent
 
 model_loading_lock = threading.Lock()
 AI_models_list         = ( SRVGGNetCompact_models_list + AI_LIST_SEPARATOR + RRDB_models_list + AI_LIST_SEPARATOR + IRCNN_models_list )
-gpus_list              = ["Auto", "GPU 1", "GPU 2", "GPU 3", "GPU 4" ]
 keep_frames_list       = [ "Disabled", "Enabled" ]
 image_extension_list   = [ ".png", ".jpg", ".bmp", ".tiff" ]
 video_extension_list   = [ ".mp4 (x264)", ".mp4 (x265)", ".avi" ]
 interpolation_list     = [ "Low", "Medium", "High", "Disabled" ]
 audio_mode_list        = ["Disabled", "Audio Enchancement", "Vocal Isolation"] 
-AI_multithreading_list = [ "1 threads", "2 threads", "3 threads", "4 threads", "5 threads", "6 threads"]
 OUTPUT_PATH_CODED    = "Same path as input files"
 DOCUMENT_PATH        = os_path_join(os_path_expanduser('~'), 'Documents')
 USER_PREFERENCE_PATH = find_by_relative_path(f"{DOCUMENT_PATH}{os_separator}{app_name}_UserPreference.json")
@@ -207,7 +225,6 @@ if os_path_exists(USER_PREFERENCE_PATH):
         json_data = json_load(json_file)
         default_AI_model          = json_data["default_AI_model"]
         default_AI_multithreading = json_data["default_AI_multithreading"]
-        default_gpu               = json_data.get("default_gpu", gpus_list[0])
         default_image_extension   = json_data["default_image_extension"]
         default_video_extension   = json_data["default_video_extension"]
         default_interpolation     = json_data["default_interpolation"]
@@ -216,12 +233,11 @@ if os_path_exists(USER_PREFERENCE_PATH):
         default_output_path       = json_data["default_output_path"]
         default_resize_factor     = json_data["default_resize_factor"]
         default_VRAM_limiter      = json_data["default_VRAM_limiter"]
-        default_cpu_number        = json_data["default_cpu_number"]
 else:
     print(f"[{app_name}] Preference file does not exist, using default coded value")
     default_AI_model          = AI_models_list[0]
-    default_AI_multithreading = AI_multithreading_list[0]
-    default_gpu               = gpus_list[0]
+    default_AI_multithreading = max(1, int(os_cpu_count() // 2))
+    default_gpu               = get_gpu_vram()
     default_keep_frames       = keep_frames_list[0]
     default_image_extension   = image_extension_list[0]
     default_video_extension   = video_extension_list[0]
@@ -230,7 +246,7 @@ else:
     default_output_path       = OUTPUT_PATH_CODED
     default_resize_factor     = str(50)
     default_VRAM_limiter      = str(4)
-    default_cpu_number        = str(int(os_cpu_count()/2))
+    default_cpu_number        = str(int(get_cpu_number()))
 
 COMPLETED_STATUS = "Completed"
 ERROR_STATUS     = "Error"
@@ -279,6 +295,162 @@ supported_video_extensions = [
 
 
 
+def load_llama_instruct():
+    from transformers import AutoTokenizer, AutoModelForCausalLM,pipeline
+    import os
+    import torch 
+
+    model_path = r"C:\Users\didri\Desktop\Programmering\Programvarer\LearnReflect VideoEnchancer System\llama3\Llama-3.2-3B-Instruct\models--meta-llama--Llama-3.2-3B-Instruct\snapshots\0cb88a4f764b7a12671c53f0838cd831a0843b95"
+
+    try:
+        # Check if  path exists
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model directory '{model_path}' does not exist.")
+        
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForCausalLM.from_pretrained(model_path)
+        
+        print("Model and tokenizer loaded successfully.")
+
+    
+        pipe = pipeline(
+            "text-generation",
+            model=model,
+            tokenizer=tokenizer,
+            device_map="cuda",
+            torch_dtype=torch.bfloat16,
+            
+        )
+        
+
+        messages = [
+        {"role": "system", "content": "You are a pirate chatbot who always responds in pirate speak!"},
+        {"role": "user", "content": "Who are you?"},
+        ]
+        outputs = pipe(
+            messages,
+            max_new_tokens=256,
+        )
+
+        # Print the generated response
+        print(outputs[0]["generated_text"])
+
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+    except OSError as e:
+        print(f"OS error occurred: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+
+
+class Agent_GUI():
+    """Agent that retrieves transcripts, searches the web, and generates optimized metadata for videos."""
+
+    def __init__(self, parent_container):
+        print("Initializing LR_AGENT")
+        self.parent_container = parent_container
+        self.uploaded_files = []
+        self.load_llama_instruct = load_llama_instruct()
+
+        # Container setup
+        self.container = CTkFrame(
+            master=self.parent_container,
+            fg_color="#000000",
+            border_width=2,
+            border_color="#404040",
+            corner_radius=10
+        )
+        self.container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+
+   
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.top_bar = CTkFrame(
+            master=self.container,
+            fg_color="#282828"
+        )
+        self.top_bar.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+
+   
+        self.file_menu_var = StringVar(value="No files uploaded")
+        self.file_menu = CTkOptionMenu(
+            master=self.top_bar,
+            variable=self.file_menu_var,
+            values=[],
+            width=200,
+            height=30,
+            font=bold11,
+            dropdown_font=bold11,
+            fg_color="#282828",
+            button_color="#404040",
+            text_color="#FFFFFF"
+        )
+        self.file_menu.pack(side="left", padx=10, pady=5)
+
+    
+        self.metadata_btn = CTkButton(
+            master=self.top_bar,
+            text="Generate Metadata",
+            width=140,
+            height=30,
+            font=bold11,
+            border_width=1,
+            fg_color="#282828",
+            text_color="#E0E0E0",
+            border_color="#0096FF",
+            command=self.load_llama_instruct()
+        )
+        self.metadata_btn.pack(side="left", padx=10, pady=5)
+
+    
+        self.info_button_LearnReflect_Agent = create_info_button(
+            open_LR_Agent_tool_info,
+            text="INFO",
+            width=15,
+            master=self.top_bar
+        )
+        self.info_button_LearnReflect_Agent.pack(side="left", padx=10, pady=5)
+
+  
+        self.details_text = CTkTextbox(
+            master=self.container,
+            width=1000,
+            height=500,
+            font=("Arial", 20),
+            corner_radius=10,
+            state="disabled"
+        )
+        self.details_text.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+
+   
+        self.container.columnconfigure(0, weight=1)
+        self.container.rowconfigure(1, weight=1)
+
+
+    def update_file_list(self, new_files):
+        """Update dropdown with new files"""
+        self.uploaded_files.extend(new_files)
+        file_names = [os_path_basename(f) for f in self.uploaded_files]
+        self.file_menu.configure(values=file_names)
+        if file_names:
+            self.file_menu_var.set(file_names[0])
+
+
+
+    def clear_file_list(self):
+        """Reset dropdown to empty state"""
+        self.uploaded_files = []
+        self.file_menu.configure(values=[])
+        self.file_menu_var.set("No files uploaded")
+
+
+
+    def generate_metadata(self):
+        """Placeholder method for metadata generation — extend this logic."""
+        print("Generating video metadata...")
 
 
 
@@ -304,7 +476,29 @@ supported_video_extensions = [
 
 
 
-####TOOL(4) FOR TOOLCLASS#####
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SocialMediaUploading: #Upload videos too (instagram,facebook,youtube,tiktok) if available for api's. (options too use smolgent with a generate button for automatic generation of (title,description,keywords,hashtags.))
     def __init__(self, parent_container):
         self.parent_container = parent_container
@@ -388,180 +582,16 @@ class SocialMediaUploading: #Upload videos too (instagram,facebook,youtube,tikto
 
 
 
-####TOOL(3) FOR TOOLCLASS#####
-####Agent that retrieve transcript from video, and search the web for similar details too find a unique title,description,hashtag,keywords that will boost the video, and output a detailed text of it.  
-class LR_AGENT:
-    """Agent that retrieves transcripts, searches the web, and generates optimized metadata for videos."""
 
-    def __init__(self, parent_container):
-        print("Initializing LR_AGENT")
-        self.parent_container = parent_container
-        self.uploaded_files = []
 
-        # Container setup
-        self.container = CTkFrame(
-            master=self.parent_container,
-            fg_color="#000000",
-            border_width=2,
-            border_color="#404040",
-            corner_radius=10
-        )
-        self.container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-   
-        self.create_widgets()
 
-    def create_widgets(self):
-       
-        self.top_bar = CTkFrame(
-            master=self.container,
-            fg_color="#282828"
-        )
-        self.top_bar.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
 
-   
-        self.file_menu_var = StringVar(value="No files uploaded")
-        self.file_menu = CTkOptionMenu(
-            master=self.top_bar,
-            variable=self.file_menu_var,
-            values=[],
-            width=200,
-            height=30,
-            font=bold11,
-            dropdown_font=bold11,
-            fg_color="#282828",
-            button_color="#404040",
-            text_color="#FFFFFF"
-        )
-        self.file_menu.pack(side="left", padx=10, pady=5)
 
-    
-        self.metadata_btn = CTkButton(
-            master=self.top_bar,
-            text="Generate Metadata",
-            width=140,
-            height=30,
-            font=bold11,
-            border_width=1,
-            fg_color="#282828",
-            text_color="#E0E0E0",
-            border_color="#0096FF",
-            command=self.generate_metadata
-        )
-        self.metadata_btn.pack(side="left", padx=10, pady=5)
 
-    
-        self.info_button_LearnReflect_Agent = create_info_button(
-            open_LR_Agent_tool_info,
-            text="INFO",
-            width=15,
-            master=self.top_bar
-        )
-        self.info_button_LearnReflect_Agent.pack(side="left", padx=10, pady=5)
 
-  
-        self.details_text = CTkTextbox(
-            master=self.container,
-            width=1000,
-            height=500,
-            font=("Arial", 20),
-            corner_radius=10,
-            state="disabled"
-        )
-        self.details_text.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 
-   
-        self.container.columnconfigure(0, weight=1)
-        self.container.rowconfigure(1, weight=1)
 
-    def update_file_list(self, new_files):
-        """Update dropdown with new files"""
-        self.uploaded_files.extend(new_files)
-        file_names = [os_path_basename(f) for f in self.uploaded_files]
-        self.file_menu.configure(values=file_names)
-        if file_names:
-            self.file_menu_var.set(file_names[0])
-
-    def clear_file_list(self):
-        """Reset dropdown to empty state"""
-        self.uploaded_files = []
-        self.file_menu.configure(values=[])
-        self.file_menu_var.set("No files uploaded")
-
-    def generate_metadata(self):
-        """Placeholder method for metadata generation — extend this logic."""
-        print("Generating video metadata...")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-####TOOL(2) FOR TOOLCLASS#####
 ####Youtube Download#####
 global youtube_progress_var
 def place_youtube_download_menu(parent_container):
@@ -588,7 +618,7 @@ def place_youtube_download_menu(parent_container):
             width=100,
             master=youtube_frame
         )
-    Info_button_youtubedownloader.place(relx=0.12, rely=0.68, anchor="e")
+    Info_button_youtubedownloader.place(relx=0.19, rely=0.60, anchor="e")
 
 
 
@@ -611,7 +641,7 @@ def place_youtube_download_menu(parent_container):
         text_color="#00FF00",
         width=100
     )
-    progress_label.place(relx=0.25, rely=0.4, anchor="center")
+    progress_label.place(relx=0.25, rely=0.75, anchor="center")
 
 
 
@@ -764,6 +794,9 @@ def place_youtube_download_menu(parent_container):
             if audio_formats:
                 audio_format_var.set(audio_formats[0])
 
+            fetch_button.cofigure(state="disabled")
+            
+
 
     
     fetch_button = CTkButton(
@@ -893,6 +926,8 @@ def get_available_formats(youtube_url):
     ydl_opts = {
             'quiet': True,
              "nocheckcertificate": True,
+             'format': 'best',
+             
             }
     if cookie_file_path:
         ydl_opts["cookiefile"] = cookie_file_path
@@ -1386,7 +1421,7 @@ class ToolWindowClass:
             self.Create_Social_Media_uploading()
 
     def create_smol_agent(self):
-        self.smol_agent = LR_AGENT(self.content_frame)
+        self.smol_agent = Agent_GUI(self.content_frame)
         self.smol_agent.container.pack(fill="both", expand=True, padx=10, pady=10)
 
 
@@ -1940,8 +1975,16 @@ def place_loadFile_section(window):
     background.place(relx = 0.0, rely = 0.0, relwidth = 1.0, relheight = 0.42)
     input_file_button.place(relx = 0.55, rely = 0.4, anchor = "center")
 
-
-
+def place_upscale_button(): 
+    upscale_button = create_active_button(
+        command = upscale_button_command,
+        text    = "UPSCALE",
+        icon    = upscale_icon,
+        width   = 140,
+        height  = 30
+    )
+    upscale_button.place(relx = 0.55, rely = 0.362, anchor = "center")
+    upscale_button.lift()
 
 
 
@@ -2234,7 +2277,7 @@ class AI:
         Model_type = self.Return_AI_Audio_model_name(selected_audio_mode)
         print(f"Model_type returned: {Model_type}")
         if Model_type is None:
-            print("No valid model selected for  audio inference. skipping...")
+            print("Selected mode for Audio Infernece: Normal")
             return None
         
         #Extracts the audio from video
@@ -3216,31 +3259,32 @@ def create_info_button(
         fg_color      = "transparent",
         hover_color   = "black",
         text_color    = text_color,
-        anchor        = "w",
+        anchor        = "center",
         corner_radius = 10,
         height        = 14,
         width         = width,
         font          = bold12,
         image         = bg_image_ctk,
-        border_width  = 1,
-        border_color  = "#404040"  
-    
+        border_width  = 1.2,
+        border_color  = "black" ,
     )
 
 
-
+   
 
 def create_option_menu(
         command: Callable, 
         values: list,
-        default_value: str
+        default_value: str,
+        width: int = 150,
+        master=None  
         ) -> CTkOptionMenu:
     
     option_menu = CTkOptionMenu(
-        master  = window, 
+        master=master if master else window,  
         command = command,
         values  = values,
-        width         = 150,
+        width         = width,
         height        = 30,
         corner_radius = 5,
         dropdown_font = bold11,
@@ -3250,17 +3294,60 @@ def create_option_menu(
         fg_color      = widget_background_color,
         button_color       = widget_background_color,
         button_hover_color = "#282828",
-        dropdown_fg_color  = text_color
+        dropdown_fg_color  = text_color,
     )
     option_menu.set(default_value)
     return option_menu
 
 
 
+def create_option_menu_2(
+        command: Callable, 
+        values: list,
+        default_value: str,
+        width: int = 330,
+        master=None  
+        ) -> CTkFrame:
+    
 
-def create_text_box(textvariable: StringVar) -> CTkEntry:
+    option_menu_frame = CTkFrame(
+        master=master, 
+        width=width, 
+        height=40, 
+        border_width=1.2,  
+        border_color="black",  
+        corner_radius=5
+    )
+
+
+    option_menu = CTkOptionMenu(
+        master=option_menu_frame, 
+        command=command,
+        values=values,
+        width=width,
+        height=30,
+        corner_radius=5,
+        dropdown_font=bold11,
+        font=bold11,
+        anchor="center",
+        text_color=text_color,
+        fg_color=widget_background_color,
+        button_color=widget_background_color,
+        button_hover_color="#282828",
+        dropdown_fg_color="black"
+    )
+    option_menu.set(default_value)
+
+    option_menu_frame.pack_propagate(False)
+    option_menu.place(relx=0.5, rely=0.5, anchor="center")  
+
+    return option_menu_frame  
+
+
+
+def create_text_box(textvariable: StringVar,master=None) -> CTkEntry:
     return CTkEntry(
-        master        = window, 
+        master=master if master else window,        
         textvariable  = textvariable,
         corner_radius = 5,
         width         = 150,
@@ -3270,7 +3357,7 @@ def create_text_box(textvariable: StringVar) -> CTkEntry:
         text_color    = text_color,
         fg_color      = widget_background_color,
         border_width  = 1,
-        border_color  = "#404040",  
+        border_color  = "black",  
     )
 
 
@@ -3287,7 +3374,7 @@ def create_text_box_output_path(textvariable: StringVar) -> CTkEntry:
         justify       = "center",
         text_color    = "#C0C0C0",
         fg_color      = "#000000",
-        border_color  = "#404040",
+        border_color  = "blue",
         state         = DISABLED
     )
 
@@ -4653,15 +4740,6 @@ def select_audio_mode_from_menu(selected_mode):
 
 
 
-
-def select_AI_multithreading_from_menu(selected_option: str) -> None:
-    global selected_AI_multithreading
-    if selected_option == "Disabled":
-        selected_AI_multithreading = 1
-    else: 
-        selected_AI_multithreading = int(selected_option.split()[0])
-
-
 def select_interpolation_from_menu(selected_option: str) -> None:
     global selected_interpolation_factor
 
@@ -4675,9 +4753,6 @@ def select_interpolation_from_menu(selected_option: str) -> None:
         case "High":
             selected_interpolation_factor = 0.7
 
-def select_gpu_from_menu(selected_option: str) -> None:
-    global selected_gpu    
-    selected_gpu = selected_option
     
 def select_save_frame_from_menu(selected_option: str):
     global selected_keep_frames
@@ -4838,31 +4913,6 @@ def open_info_AI_model():
 
 
 
-def open_info_gpu():
-    option_list = [
-        "\n It is possible to select up to 4 GPUs, via the index (also visible in the Task Manager):\n" +
-        "  • Auto (the app will select the most powerful GPU)\n" + 
-        "  • GPU 1 (GPU 0 in Task manager)\n" + 
-        "  • GPU 2 (GPU 1 in Task manager)\n" + 
-        "  • GPU 3 (GPU 2 in Task manager)\n" + 
-        "  • GPU 4 (GPU 3 in Task manager)\n",
-
-        "\n NOTES\n" +
-        "  • Keep in mind that the more powerful the chosen gpu is, the faster the upscaling will be\n" +
-        "  • For optimal performance, it is essential to regularly update your GPUs drivers\n" +
-        "  • Selecting the index of a GPU not present in the PC will cause the app to use the CPU for AI operations\n"+
-        "  • In the case of a single GPU, select 'GPU 1' or 'Auto'\n"
-    ]
-
-    MessageBox(
-        messageType = "info",
-        title       = "GPU",
-        subtitle    = "This widget allows to select the GPU for AI upscale",
-        default_value = default_gpu,
-        option_list   = option_list
-    )
-
-
 
 
 
@@ -4935,35 +4985,6 @@ def open_info_AI_interpolation():
 
 
 
-def open_info_AI_multithreading():
-    option_list = [
-        " This option can improve video upscaling performance, especially with powerful GPUs",
-
-        " \n AI MULTITHREADING OPTIONS\n"
-        + "  • 1 threads - upscaling 1 frame\n" 
-        + "  • 2 threads - upscaling 2 frame simultaneously\n" 
-        + "  • 3 threads - upscaling 3 frame simultaneously\n" 
-        + "  • 4 threads - upscaling 4 frame simultaneously\n" ,
-
-        " \n NOTES \n"
-        + "  • As the number of threads increases, the use of CPU, GPU and RAM memory also increases\n" 
-        + "  • In particular, the GPU is put under a lot of stress, and may reach high temperatures\n" 
-        + "  • Keep an eye on the temperature of your PC so that it doesn't overheat \n" 
-        + "  • The app selects the most appropriate number of threads if the chosen number exceeds GPU capacity\n" ,
-
-    ]
-
-    MessageBox(
-        messageType = "info",
-        title       = "AI multithreading", 
-        subtitle    = "This widget allows to choose how many video frames are upscaled simultaneously",
-        default_value = default_AI_multithreading,
-        option_list   = option_list
-    )
-
-
-
-
 def open_info_image_output():
     option_list = [
         " \n PNG\n  • very good quality\n  • slow and heavy file\n  • supports transparent images\n",
@@ -5006,24 +5027,6 @@ def open_info_video_extension():
 
 
 
-
-def open_info_vram_limiter():
-    option_list = [
-        " It is important to enter the correct value according to the VRAM of selected GPU ",
-        " Selecting a value greater than the actual amount of GPU VRAM may result in upscale failure",
-        " For integrated GPUs (Intel-HD series • Vega 3,5,7) - select 2 GB",
-    ]
-
-    MessageBox(
-        messageType = "info",
-        title       = "GPU Vram (GB)",
-        subtitle    = "This widget allows to set a limit on the GPU VRAM memory usage",
-        default_value = default_VRAM_limiter,
-        option_list   = option_list
-    )
-
-
-
 def open_info_input_resolution():
     option_list = [
         " A high value (>70%) will create high quality photos/videos but will be slower",
@@ -5044,22 +5047,6 @@ def open_info_input_resolution():
         option_list   = option_list
     )
 
-def open_info_cpu():
-    option_list = [
-        " When possible the app will use the number of cpus selected",
-
-        "\n Currently this value is used for: \n" +
-        "  • video frames extraction \n" +
-        "  • video encoding \n",
-    ]
-
-    MessageBox(
-        messageType = "info",
-        title       = "Cpu number",
-        subtitle    = "This widget allows to choose how many cpus to devote to the app",
-        default_value = default_cpu_number,
-        option_list   = option_list
-    )
 
 
 def place_input_output_resolution_textboxs():
@@ -5117,94 +5104,66 @@ def place_input_output_resolution_textboxs():
 
 
 
-
 def place_output_path_textbox():
-    output_path_button  = create_info_button(open_info_output_path, "Output path", width = 15)
     output_path_textbox = create_text_box_output_path(selected_output_path) 
     select_output_path_button = create_active_button(command = open_output_path_action, text = "SELECT",  width   = 85, height  = 25)
-
-    output_path_button.place(relx = column1_5_x - 0.56, rely = row0_y - 0.11, anchor = "center")
+    
     output_path_textbox.place(relx = column1_5_x - 0.56, rely  = row0_y - 0.08, anchor = "center")
     select_output_path_button.place(relx = column2_x - 0.612, rely  = row0_y - 0.08, anchor = "center")
 
 
 
 def place_AI_menu():
-    AI_menu_button = create_info_button(open_info_AI_model, "AI model")
-    AI_menu        = create_option_menu(select_AI_from_menu, AI_models_list, default_AI_model)
+    AI_menu_frame = CTkFrame(window, border_width=2, border_color="blue", corner_radius=10, height=90, width=350)
+    AI_menu_frame.place(relx=column0_x - 0.1235, rely=row1_y - 0.111, anchor="center")
 
-    AI_menu_button.place(relx = column0_x - 0.15, rely = row1_y - 0.05, anchor = "center")
-    AI_menu.place(relx = column0_x- 0.15, rely = row1_y, anchor = "center")
 
+    AI_menu_button = create_info_button(open_info_AI_model, "AI model", width=335,master=AI_menu_frame)
+    AI_menu = create_option_menu_2(select_AI_from_menu, AI_models_list, default_AI_model,master=AI_menu_frame)
+    AI_menu.configure(width=335)
+
+    AI_menu_button.place(relx=0.5, rely=0.25, anchor="center") 
+    AI_menu.place(relx=0.5, rely=0.65, anchor="center") 
 
 
 
 def place_AI_interpolation_menu():
-    interpolation_button = create_info_button(open_info_AI_interpolation, "AI Interpolation")
-    interpolation_menu   = create_option_menu(select_interpolation_from_menu, interpolation_list, default_interpolation)
+    AI_interpolation_frame = CTkFrame(window, border_width=2, border_color="blue", corner_radius=10, height=90, width=350)
+    AI_interpolation_frame.place(relx=column0_x - 0.1235, rely=row1_y + 0.00, anchor="center")
+
+    interpolation_button = create_info_button(open_info_AI_interpolation, "AI Interpolation",width=335,master=AI_interpolation_frame)
+    interpolation_menu   = create_option_menu_2(select_interpolation_from_menu, interpolation_list, default_interpolation,master=AI_interpolation_frame)
     
-    interpolation_button.place(relx = column0_x- 0.15, rely = row3_y - 0.05, anchor = "center")
-    interpolation_menu.place(relx = column0_x- 0.15, rely  = row3_y, anchor = "center")
+    interpolation_button.place(relx=0.5, rely=0.25, anchor="center")
+    interpolation_menu.place(relx=0.5, rely=0.65, anchor="center")
  
 
 
-
-def place_AI_multithreading_menu():
-    AI_multithreading_button = create_info_button(open_info_AI_multithreading, "AI multithreading")
-    AI_multithreading_menu   = create_option_menu(select_AI_multithreading_from_menu, AI_multithreading_list, default_AI_multithreading)
-    
-    AI_multithreading_button.place(relx = column0_x- 0.15, rely = row2_y - 0.05, anchor = "center")
-    AI_multithreading_menu.place(relx = column0_x- 0.15, rely  = row2_y, anchor = "center")
 
 
 
 
 def place_input_resolution_textbox():
-    resize_factor_button  = create_info_button(open_info_input_resolution, "Input resolution %")
-    resize_factor_textbox = create_text_box(selected_input_resize_factor) 
+    resize_factor_frame = CTkFrame(window, border_width=2, border_color="blue", corner_radius=10, height=90, width=350)
+    resize_factor_frame.place(relx=column0_x - 0.1235, rely=row1_y + 0.32, anchor="center")
+    resize_factor_button  = create_info_button(open_info_input_resolution, "Input resolution %",master=resize_factor_frame)
+    resize_factor_textbox = create_text_box(selected_input_resize_factor,master=resize_factor_frame) 
 
-    resize_factor_button.place(relx=column1_x- 0.35,rely=row4_y - 0.05,anchor="center")
-    resize_factor_textbox.place(relx=column1_x- 0.35,rely=row4_y,anchor="center")
-
-
-
-
-def place_gpu_menu():
-    gpu_button = create_info_button(open_info_gpu, "GPU")
-    gpu_menu   = create_option_menu(select_gpu_from_menu, gpus_list, default_gpu)
-    
-    gpu_button.place(relx = column1_x- 0.35, rely = row1_y - 0.053, anchor = "center")
-    gpu_menu.place(relx = column1_x- 0.35, rely  = row1_y, anchor = "center")
-
-
-
-
-def place_vram_textbox():
-    vram_button  = create_info_button(open_info_vram_limiter, "GPU Vram (GB)")
-    vram_textbox = create_text_box(selected_VRAM_limiter) 
-  
-    vram_button.place(relx = column1_x- 0.35, rely = row2_y - 0.05, anchor = "center")
-    vram_textbox.place(relx = column1_x- 0.35, rely  = row2_y, anchor = "center")
-
-
-
-
-def place_cpu_textbox():
-    cpu_button  = create_info_button(open_info_cpu, "CPU number")
-    cpu_textbox = create_text_box(selected_cpu_number)
-
-    cpu_button.place(relx = column1_x- 0.35, rely = row3_y - 0.05, anchor = "center")
-    cpu_textbox.place(relx = column1_x- 0.35, rely  = row3_y, anchor = "center")
+    resize_factor_button.place(relx=0.5, rely=0.25, anchor="center")
+    resize_factor_textbox.place(relx=0.5, rely=0.65, anchor="center")
 
 
 
     
 def place_Audio_Selection_menu():
-    audio_mode_button = create_info_button(open_info_audio_mode,"Audio Mode",width=150)
-    Audio_mode_menu = create_option_menu(select_audio_mode_from_menu,audio_mode_list,default_audio_mode)
+    audio_mode_frame = CTkFrame(window, border_width=2, border_color="blue", corner_radius=10, height=90, width=350)
+    audio_mode_frame.place(relx=column0_x - 0.1235, rely=row1_y + 0.111, anchor="center")
+
+    audio_mode_button = create_info_button(open_info_audio_mode,"Audio Mode",width=335,master=audio_mode_frame)
+    Audio_mode_menu = create_option_menu_2(select_audio_mode_from_menu,audio_mode_list,default_audio_mode,master=audio_mode_frame)
   
-    audio_mode_button.place( relx = column0_x- 0.15, rely = row4_y - 0.05, anchor = "center")
-    Audio_mode_menu.place(relx = column0_x- 0.15, rely = row4_y, anchor = "center")
+    audio_mode_button.place(relx=0.5, rely=0.25, anchor="center")
+    Audio_mode_menu.place(relx=0.5, rely=0.65, anchor="center")
 
 
 
@@ -5220,20 +5179,21 @@ def place_keep_frames_menu():
 
 
 def place_image_output_menu():
-    file_extension_button = create_info_button(open_info_image_output, "Image output")
-    file_extension_menu   = create_option_menu(select_image_extension_from_menu, image_extension_list, default_image_extension)
+    file_extension_video_extension_button_menu = CTkFrame(window, border_width=2, border_color="blue", corner_radius=10, height=90, width=350)
+    file_extension_video_extension_button_menu.place(relx=column0_x - 0.1235, rely=row1_y + 0.22, anchor="center")
+
+    file_extension_button = create_info_button(open_info_image_output, "Image output",master=file_extension_video_extension_button_menu,width=165)
+    file_extension_menu   = create_option_menu_2(select_image_extension_from_menu, image_extension_list, default_image_extension,master=file_extension_video_extension_button_menu,width=165)
     
-    file_extension_button.place(relx = column2_x- 0.6277, rely = row1_y - 0.1455, anchor = "center")
-    file_extension_menu.place(relx = column2_x- 0.63, rely = row1_y -0.1, anchor = "center")
-
-
-
-def place_video_extension_menu():
-    video_extension_button = create_info_button(open_info_video_extension, "Video output")
-    video_extension_menu   = create_option_menu(select_video_extension_from_menu, video_extension_list, default_video_extension)
+    video_extension_button = create_info_button(open_info_video_extension, "Video output",master=file_extension_video_extension_button_menu,width=165)
+    video_extension_menu   = create_option_menu_2(select_video_extension_from_menu, video_extension_list, default_video_extension,master=file_extension_video_extension_button_menu,width=165)
     
-    video_extension_button.place(relx = column2_x- 0.71, rely = row2_y - 0.25, anchor = "center")
-    video_extension_menu.place(relx = column2_x- 0.71, rely = row2_y - 0.205, anchor = "center")
+ 
+    video_extension_menu.place(relx=0.5, rely=0.75, anchor="w")
+    file_extension_menu.place(relx=0.5, rely=0.75, anchor="e")
+    video_extension_button.place(relx=0.5, rely=0.40, anchor="w")
+    file_extension_button.place(relx=0.5, rely=0.40, anchor="e")
+
 
 
 
@@ -5266,16 +5226,7 @@ def place_stop_button():
 
 
 
-def place_upscale_button(): 
-    upscale_button = create_active_button(
-        command = upscale_button_command,
-        text    = "UPSCALE",
-        icon    = upscale_icon,
-        width   = 140,
-        height  = 30
-    )
-    upscale_button.place(relx = column2_x - 0.625, rely = row4_y + 0.04, anchor = "center")
-    upscale_button.lift()
+
 
 
 def create_option_background():
@@ -5325,7 +5276,6 @@ def create_option_background():
 def on_app_close() -> None:
     window.grab_release()
     window.destroy()
-   
     load_model_inference()
     global selected_AI_model
     global selected_AI_multithreading
@@ -5437,19 +5387,14 @@ class VideoEnhancer():
         place_loadFile_section(Master)
         place_output_path_textbox()
         place_AI_menu()
-        place_AI_multithreading_menu()
         place_AI_interpolation_menu()
         place_Audio_Selection_menu()
-        place_gpu_menu()
-        place_vram_textbox()
-        place_cpu_textbox()
         place_input_resolution_textbox()
         place_image_output_menu()
-        place_video_extension_menu()
         place_message_label()
         place_upscale_button()
         load_cookie_file_path()
-
+        selected_VRAM_limiter.set(str(round(get_gpu_vram() / 1000)) if get_gpu_vram() else "4")
  
 
         
@@ -5457,7 +5402,7 @@ class VideoEnhancer():
 if __name__ == "__main__":
    # from Decryption import validate_jwt
    # if not validate_jwt():
-     #   sys.exit(1)
+   #   sys.exit(1)
     
 
     multiprocessing_freeze_support()
@@ -5490,14 +5435,13 @@ if __name__ == "__main__":
     global tiles_resolution
     global input_resize_factor
     global cpu_number
-
+    selected_gpu = "Auto"
     selected_file_list = []
     selected_AI_model          = default_AI_model
-    selected_gpu               = default_gpu
     selected_image_extension   = default_image_extension
     selected_video_extension   = default_video_extension
-    selected_AI_multithreading = int(default_AI_multithreading.split()[0])
-    
+    selected_AI_multithreading = max(1, int(os_cpu_count() // 2))
+    default_cpu_number        = str(int(get_cpu_number()))
     selected_keep_frames = True if default_keep_frames == "Enabled" else False
 
     selected_interpolation_factor = {
@@ -5513,7 +5457,7 @@ if __name__ == "__main__":
     selected_cpu_number.set(default_cpu_number)
     selected_output_path.set(default_output_path)
 
-    info_message.set("AI upscaling Ready")
+    info_message.set("Welcome Back")
     selected_input_resize_factor.trace_add('write', update_file_widget)
 
 
